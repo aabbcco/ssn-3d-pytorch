@@ -1,0 +1,6 @@
+*.png
+log/
+__pycache__/
+settings.json
+*.jpg
+*.csv

@@ -34,9 +34,10 @@ class BSDS:
 
     def __getitem__(self, idx):
         idx = self.index[idx][:-4]
-        gt = scipy.io.loadmat(os.path.join(self.gt_dir, idx+".mat"))
-        t = np.random.randint(0, len(gt['groundTruth'][0]))
-        gt = gt['groundTruth'][0][t][0][0][0]
+        # gt = scipy.io.loadmat(os.path.join(self.gt_dir, idx+".mat"))
+        gt = np.loadtxt(os.path.join(self.gt_dir, idx+".csv"), delimiter=',')
+        # t = np.random.randint(0, len(gt['groundTruth'][0]))
+        # gt = gt['groundTruth'][0][t][0][0][0]
 
         img = rgb2lab(plt.imread(os.path.join(self.img_dir, idx+".jpg")))
 
@@ -54,7 +55,7 @@ class BSDS:
         img = torch.from_numpy(img)
         img = img.permute(2, 0, 1)
 
-        return img, gt.reshape(50, -1).float()
+        return img, gt.reshape(50, -1).float(), idx
 
 
     def __len__(self):

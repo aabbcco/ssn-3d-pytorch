@@ -42,7 +42,7 @@ def reconstruction(assignment, labels, hard_assignment=None):
         hard_assignment: torch.Tensor
             A Tensor of shape (B, n_pixels)
     """
-    labels = labels.permute(0, 2, 1).contiguous()
+    labels = labels.permute(0, 2, 1).contiguous()#B*2*pixel when input 
 
     # matrix product between (n_spixels, n_pixels) and (n_pixels, channels)
     spixel_mean = torch.bmm(assignment, labels) / (assignment.sum(2, keepdim=True) + 1e-16)
@@ -72,7 +72,7 @@ def reconstruct_loss_with_cross_etnropy(assignment, labels, hard_assignment=None
     reconstracted_labels = reconstruction(assignment, labels, hard_assignment)
     reconstracted_labels = reconstracted_labels / (1e-16 + reconstracted_labels.sum(1, keepdim=True))
     mask = labels > 0
-    return -(reconstracted_labels[mask] + 1e-16).log().mean()
+    return -(reconstracted_labels[mask] + 1e-16).log().mean() #cross entropy
 
 
 def reconstruct_loss_with_mse(assignment, labels, hard_assignment=None):
@@ -89,3 +89,19 @@ def reconstruct_loss_with_mse(assignment, labels, hard_assignment=None):
     """
     reconstracted_labels = reconstruction(assignment, labels, hard_assignment)
     return torch.nn.functional.mse_loss(reconstracted_labels, labels)
+    # return torch.nn.functional.l1_loss(reconstracted_labels, labels)
+    
+
+
+
+def uniform_compact_loss(assignment, labels, hard_assignment=None,device="cuda"):
+    reconstracted_labels = reconstruction(assignment, labels, hard_assignment)
+    labels = labels.permute(0, 2, 1)
+    reconstracted_labels = reconstracted_labels.permute(0, 2, 1)
+    compactness_per_spixel = torch.zeros(torch.max(hard_assignment) + 1)
+    compactness_per_spixel=compactness_per_spixel.to(device)
+    for i in range(torch.max(hard_assignment)+1):
+        mask = torch.eq(hard_assignment, i)
+        compactness_per_spixel[i] = torch.nn.functional.mse_loss(reconstracted_labels[mask],labels[mask])
+    compactness_per_spixel -= torch.mean(compactness_per_spixel)
+    return torch.nn.functional.mse_loss(compactness_per_spixel,(torch.zeros(torch.max(hard_assignment) + 1)).to(device))
