@@ -12,7 +12,7 @@ from skimage.segmentation._slic import _enforce_label_connectivity_cython
 
 from lib.ssn.ssn import sparse_ssn_iter
 from lib.dataset import bsds
-from evaluations import undersegmentation_error, achievable_segmentation_accuracy, compactness,boundary_recall
+from evaluations import undersegmentation_error, achievable_segmentation_accuracy, compactness, boundary_recall
 
 
 @torch.no_grad()
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     parser.add_argument("--niter", default=10, type=int,
                         help="number of iterations for differentiable SLIC")
     parser.add_argument("--nspix", default=100, type=int,
-                        help="number of superpixels")
+                        help="number of superpixels,100 to nspix")
     parser.add_argument('--dest', '-d', default='results',
                         help='dest folder the image saves')
     parser.add_argument("--color_scale", default=0.26, type=float)
@@ -104,37 +104,42 @@ if __name__ == "__main__":
     n_iter = args.niter
     fdim = args.fdim
 
-    if weight is not None:
-        from model import SSNModel
-        model = SSNModel(fdim, nspix, n_iter).to("cuda")
-        model.load_state_dict(torch.load(weight))
-        model.eval()
-    else:
-        def model(data): return sparse_ssn_iter(data, nspix, n_iter)
-
-    #Dataset did everything for us
+    # Dataset did everything for us
     dataset = bsds.BSDS(args.root, split='val')
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
 
-    if not os.path.exists(args.dest):
-        os.mkdir(args.dest)
+    #generate number of spix from 100 to nspix asstep 100
+    for i in range(100, args.nspix+1, 100):
+        if not os.path.exists(args.dest):
+            os.mkdir(args.dest)
 
-    #throw every image into the net
-    for data in dataloader:
-        image, label, name = data
-        height, width = image.shape[-2:]
-        label_pred = inference(image, args.nspix, args.niter,
-                               model, args.fdim, args.color_scale, args.pos_scale)
-        label = label.argmax(1).reshape(height, width).numpy()
-        np.savetxt(os.path.join(
-            args.dest, name[0]+'.csv'), label_pred, fmt='%d', delimiter=',')
-        asa = achievable_segmentation_accuracy(label_pred, label)
-        usa = undersegmentation_error(label_pred, label)
-        cptness = compactness(label_pred)
-        BR = boundary_recall(label_pred,label)
-        image = np.squeeze(image.numpy(), axis=0).transpose(1, 2, 0)
-        image = lab2rgb(image)
-        print(name[0], '\tprocessed,asa_{:.4f}_usa{:.4f}_co{:.4f}_BR_{:.4f}'.format(
-            asa, usa, cptness,BR))
-        plt.imsave(os.path.join(args.dest, "asa_{:.4f}_usa_{:.4f}_co_{:.4f}_BR_{:.4f}_{}.jpg".format(
-            asa, usa, cptness,BR, name[0])), mark_boundaries(image, label_pred))
+        if not os.path.exists(os.path.join(args.dest, str(i))):
+            os.mkdir(os.path.join(args.dest, str(i)))
+
+        if weight is not None:
+            from model import SSNModel
+            model = SSNModel(fdim, i, n_iter).to("cuda")
+            model.load_state_dict(torch.load(weight))
+            model.eval()
+        else:
+            def model(data): return sparse_ssn_iter(data, i, n_iter)
+        
+        # throw every image into the net
+        for data in dataloader:
+            image, label, name = data
+            height, width = image.shape[-2:]
+            label_pred = inference(image, args.nspix, args.niter,
+                                model, args.fdim, args.color_scale, args.pos_scale)
+            label = label.argmax(1).reshape(height, width).numpy()
+            np.savetxt(os.path.join(args.dest,
+                                    str(i), name[0]+'.csv'), label_pred, fmt='%d', delimiter=',')
+            asa = achievable_segmentation_accuracy(label_pred, label)
+            usa = undersegmentation_error(label_pred, label)
+            cptness = compactness(label_pred)
+            BR = boundary_recall(label_pred, label)
+            image = np.squeeze(image.numpy(), axis=0).transpose(1, 2, 0)
+            image = lab2rgb(image)
+            print(name[0], '\tprocessed,asa_{:.4f}_usa{:.4f}_co{:.4f}_BR_{:.4f}'.format(
+                asa, usa, cptness, BR))
+            plt.imsave(os.path.join(args.dest, str(i), "asa_{:.4f}_usa_{:.4f}_co_{:.4f}_BR_{:.4f}_{}.jpg".format(
+                asa, usa, cptness, BR, name[0])), mark_boundaries(image, label_pred))
