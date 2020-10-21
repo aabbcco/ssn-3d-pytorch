@@ -59,7 +59,7 @@ def inference(image, nspix, n_iter, fdim=None, color_scale=0.26, pos_scale=2.5, 
 
     _, H, _ = model(inputs)
 
-    labels = labels.argmax(1).reshape(height, width)#one hot to digit?
+    labels = H.reshape(height, width).to("cpu").detach().numpy()#one hot to digit?
 
     if enforce_connectivity:
         segment_size = height * width / nspix
@@ -88,15 +88,15 @@ if __name__ == "__main__":
     parser.add_argument("--pos_scale", default=2.5, type=float)
     args = parser.parse_args()
 
-    # image = plt.imread(args.image)
+    image = plt.imread(args.image)
 
-    # s = time.time()
-    # label = inference(image, args.nspix, args.niter, args.fdim, args.color_scale, args.pos_scale, args.weight)
-    # print(f"time {time.time() - s}sec")
-    # plt.imsave("results_1e-4_enforce.png", mark_boundaries(image, label))
+    s = time.time()
+    label = inference(image, args.nspix, args.niter, args.fdim, args.color_scale, args.pos_scale, args.weight)
+    print(f"time {time.time() - s}sec")
+    plt.imsave("results_1e-4_enforce.png", mark_boundaries(image, label))
 
-    for i,name in enumerate(test_image) :
-        image = plt.imread(os.path.join(data_dir,name+'.jpg'))
-        label = inference(image, args.nspix, args.niter, args.fdim, args.color_scale, args.pos_scale, args.weight)
-        plt.imsave(os.path.join('result_orig',name+'.jpg'), mark_boundaries(image, label))
-    print('done!')   
+    # for i,name in enumerate(test_image) :
+    #     image = plt.imread(os.path.join(data_dir,name+'.jpg'))
+    #     label = inference(image, args.nspix, args.niter, args.fdim, args.color_scale, args.pos_scale, args.weight)
+    #     plt.imsave(os.path.join('result_orig',name+'.jpg'), mark_boundaries(image, label))
+    # print('done!')   
