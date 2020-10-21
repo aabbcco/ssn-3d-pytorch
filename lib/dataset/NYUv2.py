@@ -42,6 +42,9 @@ def convert_spix(label):
 
 class NYUv2(Dataset):
     def __init__(self, root, split="train", color_transforms=None, geo_transforms=None):
+
+        assert split in ['train', 'test']
+
         self.data_dir = os.path.join(root, split, 'nyu_images')
         self.gt_dir = os.path.join(root, split, 'nyu_labels')
         self.spix_dir = os.path.join(root, split, 'nyu_spixs')
@@ -55,9 +58,15 @@ class NYUv2(Dataset):
             self.data_dir, self.index[idx])))
         data = data.astype(np.float64)
         label = np.loadtxt(os.path.join(
-            self.gt_dir, self.index[idx][:-4] + '.csv'), dtype=np.int16, delimiter=',')
+            self.gt_dir, self.index[idx][:-4] + '.csv'), dtype=np.int64, delimiter=',')
         spix = np.loadtxt(np.loadtxt(os.path.join(
-            self.spix_dir, self.index[idx][:-4] + '.csv'), dtype=np.int16, delimiter=','))
+            self.spix_dir, self.index[idx][:-4] + '.csv'), dtype=np.int64, delimiter=','))
+
+        if self.color_transforms is not None:
+            img = self.color_transforms(img)
+
+        if self.geo_transforms is not None:
+            img, label, spix = self.geo_transforms([img, label, spix])
 
         label = convert_label(label)
         label = torch.from_numpy(label)
@@ -67,7 +76,7 @@ class NYUv2(Dataset):
         spix = convert_spix(spix)
         spix = torch.from_numpy(spix)
 
-        return data, label, spix, (self.index[idx])[:-4]
+        return data, label.reshape(50, -1).float(), spix.reshape(200, -1).float(), (self.index[idx])[:-4]
 
     def __len__(self):
         return len(self.index)
