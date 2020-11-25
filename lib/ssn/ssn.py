@@ -44,6 +44,49 @@ def calc_init_centroid(images, num_spixels_width, num_spixels_height):
     return centroids, init_label_map
 
 
+def calc_init_centroid_ptcloud(images, num_spixels_width, num_spixels_height):
+    """
+    calculate initial superpixels
+
+    Args:
+        images: torch.Tensor
+            A Tensor of shape (B, C, H, W)
+        spixels_width: int
+            initial superpixel width
+        spixels_height: int
+            initial superpixel height
+
+    Return:
+        centroids: torch.Tensor
+            A Tensor of shape (B, C, H * W)
+        init_label_map: torch.Tensor
+            A Tensor of shape (B, H * W)
+        num_spixels_width: int
+            A number of superpixels in each column
+        num_spixels_height: int
+            A number of superpixels int each raw
+    """
+    batchsize, channels, height, width = images.shape
+    device = images.device
+
+    centroids = torch.nn.functional.adaptive_avg_pool2d(
+        images, (num_spixels_height, num_spixels_width))
+
+    with torch.no_grad():
+        num_spixels = num_spixels_width * num_spixels_height
+        labels = torch.arange(num_spixels, device=device).reshape(
+            1, 1, *centroids.shape[-2:]).type_as(centroids)
+        init_label_map = torch.nn.functional.interpolate(
+            labels, size=(height, width), mode="nearest")
+        init_label_map = init_label_map.repeat(batchsize, 1, 1, 1)
+
+    init_label_map = init_label_map.reshape(batchsize, -1)
+    centroids = centroids.reshape(batchsize, channels, -1)
+
+    return centroids, init_label_map
+
+
+
 @torch.no_grad()
 def get_abs_indices(init_label_map, num_spixels_width):
     b, n_pixel = init_label_map.shape
@@ -160,3 +203,21 @@ def ssn_iter(pixel_features, num_spixels, n_iter):
     hard_labels = get_hard_abs_labels(affinity_matrix, init_label_map, num_spixels_width)
 
     return abs_affinity, hard_labels, spixel_features
+
+
+def soft_slic_all(point, seed, n_iter=10):
+    B = point.shape[0]
+    npix = point.shape[2]
+    nspix = seed.shape[2]
+    dist_matrix = torch.zeros([B, nspix, npix])
+    for _ in range(n_iter):
+        for i in range(nspix):
+            initials = seed[:, :, i].unsqueeze(-1).repeat(1, 1, npix)
+            dist_matrix[:, i, :] = -(pairwise_distance(point,
+                                                       initials)*pairwise_distance(point, initials))
+        QT = dist_matrix.softmax(1)
+        seed = (torch.bmm(QT, point.permute(0, 2, 1)) /
+                QT.sum(2, keepdim=True)).permute(0, 2, 1)
+    _, hard_label = QT.permute(0, 2, 1).max(-1)
+    hard_label = hard_label.unsqueeze(-1)
+    return QT, hard_label, seed.permute(0, 2, 1)

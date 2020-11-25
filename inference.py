@@ -6,7 +6,7 @@ import os
 from skimage.color import rgb2lab
 from skimage.segmentation._slic import _enforce_label_connectivity_cython
 
-from lib.ssn.ssn import sparse_ssn_iter
+from lib.ssn.ssn import soft_slic_all
 
 
 @torch.no_grad()
@@ -44,6 +44,8 @@ def inference(image, nspix, n_iter, fdim=None, color_scale=0.26, pos_scale=2.5, 
     else:
         model = lambda data: sparse_ssn_iter(data, nspix, n_iter)
 
+    print(model)
+
     height, width = image.shape[:2]
 
     nspix_per_axis = int(math.sqrt(nspix))
@@ -80,7 +82,8 @@ if __name__ == "__main__":
     from skimage.segmentation import mark_boundaries
     parser = argparse.ArgumentParser()
     parser.add_argument("--image", type=str, help="/path/to/image")
-    parser.add_argument("--weight", default=None, type=str, help="/path/to/pretrained_weight")
+    parser.add_argument("--weight", default='bset_model_ucl_test.pth',
+                        type=str, help="/path/to/pretrained_weight")
     parser.add_argument("--fdim", default=20, type=int, help="embedding dimension")
     parser.add_argument("--niter", default=10, type=int, help="number of iterations for differentiable SLIC")
     parser.add_argument("--nspix", default=100, type=int, help="number of superpixels")
