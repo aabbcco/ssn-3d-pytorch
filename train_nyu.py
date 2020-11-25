@@ -14,7 +14,7 @@ from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss
 
 
 @torch.no_grad()
-def eval(model, loader, color_scale, pos_scale, device):
+def eval(model, loader, color_scale, pos_scale, device,num_sample = 50):
     def achievable_segmentation_accuracy(superpixel, label):
         """
         Function to calculate Achievable Segmentation Accuracy:
@@ -35,8 +35,8 @@ def eval(model, loader, color_scale, pos_scale, device):
 
     model.eval()  # change the mode of model to eval
     sum_asa = 0
-    for data in loader:
-        inputs, labels, _, _ = data  # b*c*w*h
+    for i in range(num_sample):
+        inputs, labels, _, _ = iter(loader).next()  # b*c*w*h
 
         inputs = inputs.to(device)  # b*c*w*h
         labels = labels.to(device)  # sematic_lable
@@ -70,7 +70,7 @@ def eval(model, loader, color_scale, pos_scale, device):
     return sum_asa / len(loader)  # cal asa
 
 
-def update_param(data, model, optimizer, compactness, color_scale, pos_scale, device):
+def update_param(data, model, optimizer,spix_weight, compactness, color_scale, pos_scale, device):
     inputs, labels, spix, _ = data
 
     inputs = inputs.to(device)
@@ -97,7 +97,7 @@ def update_param(data, model, optimizer, compactness, color_scale, pos_scale, de
         Q, coords.reshape(*coords.shape[:2], -1), H)
     #uniform_compactness = uniform_compact_loss(Q,coords.reshape(*coords.shape[:2], -1), H,device=device)
 
-    loss = recons_loss + 0.5*recons_loss_spix + compactness * compact_loss
+    loss = recons_loss + spix_weight*recons_loss_spix + compactness * compact_loss
 
     optimizer.zero_grad()  # clear previous grad
     loss.backward()  # cal the grad
@@ -122,8 +122,8 @@ def train(cfg):
     train_loader = DataLoader(train_dataset, cfg.batchsize,
                               shuffle=True, drop_last=True, num_workers=cfg.nworkers)
 
-    test_dataset = NYUv2.NYUv2(cfg.root, split="train")
-    test_loader = DataLoader(test_dataset, 1, shuffle=False, drop_last=False)
+    test_dataset = NYUv2.NYUv2(cfg.root, split="test")
+    test_loader = DataLoader(test_dataset, 1, shuffle=True, drop_last=False)
 
     meter = Meter()
 
@@ -134,7 +134,7 @@ def train(cfg):
         for data in train_loader:
             iterations += 1
             metric = update_param(
-                data, model, optimizer, cfg.compactness, cfg.color_scale, cfg.pos_scale,  device)
+                data, model, optimizer,cfg.spix_weight, cfg.compactness, cfg.color_scale, cfg.pos_scale,  device)
             meter.add(metric)
             state = meter.state(f"[{iterations}/{cfg.train_iter}]")
             print(state)
@@ -170,7 +170,7 @@ if __name__ == "__main__":
                         default='../NYUv2', help="/ path/to/NYUv2")
     parser.add_argument("--out_dir", default="./log",
                         type=str, help="/path/to/output directory")
-    parser.add_argument("--batchsize", default=12, type=int)
+    parser.add_argument("--batchsize", default=8, type=int)
     parser.add_argument("--nworkers", default=4, type=int,
                         help="number of threads for CPU parallel")
     parser.add_argument("--lr", default=1e-4, type=float, help="learning rate")
@@ -184,7 +184,8 @@ if __name__ == "__main__":
     parser.add_argument("--color_scale", default=0.26, type=float)
     parser.add_argument("--pos_scale", default=2.5, type=float)
     parser.add_argument("--compactness", default=1e-4, type=float)
-    parser.add_argument("--test_interval", default=100, type=int)
+    parser.add_argument("--test_interval", default=1000, type=int)
+    parser.add_argument('--spix_weight',default=0.5,type=int)
 
     args = parser.parse_args()
 
