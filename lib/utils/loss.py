@@ -30,7 +30,7 @@ def sparse_reconstruction(assignment, labels, hard_assignment=None):
     return reconstructed_labels.permute(0, 2, 1).contiguous()
 
 
-def reconstruction(assignment, labels, hard_assignment=None):
+def reconstruction(QT, labels, hard_assignment=None):
     """
     reconstruction
 
@@ -42,15 +42,16 @@ def reconstruction(assignment, labels, hard_assignment=None):
         hard_assignment: torch.Tensor
             A Tensor of shape (B, n_pixels)
     """
-    labels = labels.permute(0, 2, 1).contiguous()#B*2*pixel when input 
+    #labels = labels.permute(0, 2, 1).contiguous()#B*2*pixel when input
 
     # matrix product between (n_spixels, n_pixels) and (n_pixels, channels)
-    spixel_mean = torch.bmm(assignment, labels) / (assignment.sum(2, keepdim=True) + 1e-16)
+    spixel_mean = (torch.bmm(QT, labels.permute(0, 2, 1)) /
+                   (QT.sum(2, keepdim=True) + 1e-16))
     if hard_assignment is None:
         # (B, n_spixels, n_pixels) -> (B, n_pixels, n_spixels)
-        permuted_assignment = assignment.permute(0, 2, 1).contiguous()
+        Q = QT.permute(0, 2, 1).contiguous()
         # matrix product between (n_pixels, n_spixels) and (n_spixels, channels)
-        reconstructed_labels = torch.bmm(permuted_assignment, spixel_mean)
+        reconstructed_labels = torch.bmm(Q, spixel_mean)
     else:
         # index sampling
         reconstructed_labels = torch.stack([sm[ha, :] for sm, ha in zip(spixel_mean, hard_assignment)], 0)
