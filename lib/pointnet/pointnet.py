@@ -5,7 +5,7 @@ import torch.utils.data
 from torch.autograd import Variable
 import numpy as np
 import torch.nn.functional as F
-import pointnet_util.py
+from lib.pointnet import pointnet_util
 
 
 class STN3d(nn.Module):

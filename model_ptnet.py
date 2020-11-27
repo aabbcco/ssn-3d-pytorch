@@ -7,9 +7,8 @@ import torch.nn.functional as F
 
 
 class PointNet_SSN(nn.Module):
-
     def __init__(self, feature_dim, nspix, n_iter=10, RGB=False, normal=False):
-        super.__init__()
+        super().__init__()
         self.nspix = nspix
         self.n_iter = n_iter
         self.channel = 3
@@ -31,7 +30,7 @@ class PointNet_SSN(nn.Module):
         self.bn4 = nn.BatchNorm1d(512)
         self.bn5 = nn.BatchNorm1d(2048)
         self.fstn = STNkd(k=128)
-        self.convs1 = torch.nn.Conv1d(4944, 256, 1)
+        self.convs1 = torch.nn.Conv1d(4928, 256, 1)
         self.convs2 = torch.nn.Conv1d(256, 256, 1)
         self.convs3 = torch.nn.Conv1d(256, 128, 1)
         self.convs4 = torch.nn.Conv1d(128, feature_dim, 1)
@@ -71,9 +70,9 @@ class PointNet_SSN(nn.Module):
         net = F.relu(self.bns2(self.convs2(net)))
         net = F.relu(self.bns3(self.convs3(net)))
         net = self.convs4(net)
-        net = net.transpose(2, 1).contiguous()
+        #net = net.transpose(2, 1).contiguous()
 
         if self.training:
-            return soft_slic_all(net, self.nspix, self.n_iter)
+            return soft_slic_all(net, net[:, :, :self.nspix], self.n_iter)
         else:
-            return soft_slic_all(net, self.nspix, self.n_iter)
+            return soft_slic_all(net, net[:, :, :self.nspix], self.n_iter)
