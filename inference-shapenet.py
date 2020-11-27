@@ -52,9 +52,12 @@ def inference(pointcloud, nspix, n_iter, fdim=None, pos_scale=10, weight=None):
 
     Q, H, center, feature = model(inputs)
 
+    Q = Q.to("cpu").detach().numpy()
     labels = H.to("cpu").detach().numpy()
+    feature = feature.to("cpu").detach().numpy()
+    center = center.to("cpu").detach().numpy()
 
-    return labels, center
+    return Q, labels, center, feature
 
 
 if __name__ == "__main__":
@@ -79,9 +82,12 @@ if __name__ == "__main__":
 
     pointcloud, label = iter(loader).next()
     s = time.time()
-    label, center = inference(pointcloud, args.nspix, args.niter,
+    Q, label, center, feature = inference(pointcloud, args.nspix, args.niter,
                               args.fdim, args.pos_scale, args.weight)
     print(f"time {time.time() - s}sec")
+    np.savetxt("Q.csv", np.squeeze(Q, 0), fmt="%.8e", delimiter=",")
+    np.savetxt("center.csv", np.squeeze(center, 0), fmt="%.10e", delimiter=",")
+    np.savetxt("feature.csv" np.squeeze(feature, 0), fmt="%.10e", delimiter=",")
     ptcloud = pointcloud.squeeze(0).permute(1, 0).numpy()
     ptcloud = np.concatenate((ptcloud, label.transpose(1, 0)), axis=-1)
     write.tobcd(ptcloud, 'xyzl', 'shapenet_pred.pcd')

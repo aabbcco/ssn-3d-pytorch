@@ -60,7 +60,7 @@ def update_param(data, model, optimizer, compactness,  pos_scale, device):
 
     inputs = pos_scale*inputs
 
-    Q, H, _ = model(inputs)
+    Q, H, _, _ = model(inputs)
 
     recons_loss = reconstruct_loss_with_cross_etnropy(Q, labels)
     compact_loss = reconstruct_loss_with_mse(
