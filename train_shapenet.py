@@ -112,14 +112,14 @@ def train(cfg):
                               metric["reconstruction"], iterations)
             writer.add_scalar("loss/compact_loss",
                               metric["compact"], iterations)
-            if (iterations % cfg.test_interval) == 0:
-                asa = eval(model, test_loader, cfg.pos_scale,  device)
-                print(f"validation asa {asa}")
-                writer.add_scalar("comprehensive/asa", asa, iterations)
-                if asa > max_val_asa:
-                    max_val_asa = asa
-                    torch.save(model.state_dict(), os.path.join(
-                        cfg.out_dir, "bset_model_sp_loss.pth"))
+            # if (iterations % cfg.test_interval) == 0:
+            #     asa = eval(model, test_loader, cfg.pos_scale,  device)
+            #     print(f"validation asa {asa}")
+            #     writer.add_scalar("comprehensive/asa", asa, iterations)
+            #     if asa > max_val_asa:
+            #         max_val_asa = asa
+            #         torch.save(model.state_dict(), os.path.join(
+            #             cfg.out_dir, "bset_model_sp_loss.pth"))
             if iterations == cfg.train_iter:
                 break
 
@@ -137,10 +137,10 @@ if __name__ == "__main__":
     parser.add_argument("--out_dir", default="./log",
                         type=str, help="/path/to/output directory")
     parser.add_argument("--batchsize", default=12, type=int)
-    parser.add_argument("--nworkers", default=1, type=int,
+    parser.add_argument("--nworkers", default=8, type=int,
                         help="number of threads for CPU parallel")
     parser.add_argument("--lr", default=1e-6, type=float, help="learning rate")
-    parser.add_argument("--train_iter", default=20000, type=int)
+    parser.add_argument("--train_iter", default=10000, type=int)
     parser.add_argument("--fdim", default=10, type=int,
                         help="embedding dimension")
     parser.add_argument("--niter", default=5, type=int,
