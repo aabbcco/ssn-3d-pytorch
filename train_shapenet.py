@@ -112,6 +112,8 @@ def train(cfg):
                               metric["reconstruction"], iterations)
             writer.add_scalar("loss/compact_loss",
                               metric["compact"], iterations)
+             if (iterations % 1000) == 0:
+                     torch.save(model.state_dict(), os.path.join(cfg.out_dir, "model_iter"+str(iterations)+".pth")
             # if (iterations % cfg.test_interval) == 0:
             #     asa = eval(model, test_loader, cfg.pos_scale,  device)
             #     print(f"validation asa {asa}")
