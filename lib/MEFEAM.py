@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.nn.functional import relu
 from utils.util_funcs import knn_indices_func_cpu, knn_indices_func_gpu
 
 # square_distance,query_ball point and fps sampling comes from github repository Pointnet_Point2_Pytorch
@@ -130,18 +131,19 @@ def sample_and_group_knn(radius, nsample, xyz, points, use_xyz):
 
 
 class mlp(nn.Module):
-    def __init__(self, mlp, channel_in, kernel_start=(1, 1), name='mlp', activation=None, bn=False):
-        """
-        standalone mlp module to construct MFEAM and LFAM
+    """
+    standalone mlp module to construct MFEAM and LFAM
 
-        Args:
-            mlp (list): the structure of mlp
-            channel_in(int): number of input channel
-            kernel_start:tuple,to control first kernel in mlp
-            name(str):name of the mlp
-            activation (torch function): activation function suh as relu
-            bn (bool): if the mlp uses bn
-        """
+    Args:
+        mlp (list): the structure of mlp
+        channel_in(int): number of input channel
+        kernel_start:tuple,to control first kernel in mlp
+        name(str):name of the mlp
+        activation (torch function): activation function suh as relu
+        bn (bool): if the mlp uses bn
+    """
+
+    def __init__(self, mlp, channel_in, kernel_start=(1, 1), name='mlp', activation=None, bn=False):
         self.mlp_ = nn.Sequential()
         self.name = name
         self.pre_channel = channel_in
@@ -164,19 +166,21 @@ class mlp(nn.Module):
 
 
 class MFEM(nn.Module):
+    """
+    MFEM module
+    Args:
+        mlp_multiscale (list): sequence to construct multi_scale_mlp
+        mlp_global(list):sequence to construct mlp for global feature
+        mlp_msf(list):sequence to construct mlp for Multi-Scale Locality Feature Spaces
+        nsample (int): knn sample
+        channel_in (int): input channel
+        point_scale (list): scales
+        grouping (function): query_ball or knn
+        kernel_start (tuple, optional): first kernel in mlp,Defaults to (1, 1).
+    """
+
     def __init__(self, mlp_multiscale, mlp_global, mlp_msf, nsample, channel_in, point_scale, grouping=sample_and_group_knn, kernel_start=(1, 1)):
-        """
-        MFEM module
-        Args:
-            mlp_multiscale (list): sequence to construct multi_scale_mlp
-            mlp_global(list):sequence to construct mlp for global feature
-            mlp_msf(list):sequence to construct mlp for Multi-Scale Locality Feature Spaces
-            nsample (int): knn sample
-            channel_in (int): input channel
-            point_scale (list): scales
-            grouping (function): query_ball or knn
-            kernel_start (tuple, optional): first kernel in mlp Defaults to (1, 1).
-        """
+
         #sample_and_group_knn(radius, nsample, xyz, points, use_xyz)
         self.sample_and_group = grouping
         self.nsample = nsample
@@ -223,6 +227,14 @@ class MFEM(nn.Module):
 
 
 class LFAM(nn.module):
+    """
+    LFAM module in MFEAM
+    Args:
+        nsample (int): nsample in sample and group
+        grouping (function):grouping method,knn or query_ball
+        mlp (list): mlp structure used for feature fusion
+        channel_in (int): input feature channel
+    """
     def __init__(self, nsample, grouping, mlp, channel_in,):
         self.sample_and_group = grouping
         self.nsample = nsample
@@ -236,3 +248,98 @@ class LFAM(nn.module):
         maxed_feature = mixed_feature.max(2)
 
         return maxed_feature
+
+
+class discriminative_loss(nn.Module):
+    """
+    reimplemention of discriminative loss in ASIS using Pytorch\n
+    ASIS paper here:https://arxiv.org/abs/1902.09852 \n
+    Origional implemention here(using tensorflow):https://github.com/WXinlong/ASIS.git
+
+    Args:
+        d_var (float): theta_V in L_var
+        d_dist ([type]): theta_d in L_dist
+        param_var (float, optional): param before var loss. Defaults to 1.0.
+        param_dist (float, optional): param before dist loss. Defaults to 1.0.
+        param_reg (float, optional): param before regression loss. Defaults to 0.001.
+    """
+
+    def __init__(self, d_var, d_dist, param_var=1.0, param_dist=1.0, param_reg=0.001):
+        super().__init__()
+        self.var = var_loss(d_var)
+        self.dist = dist_loss(d_diff)
+        self.par_var = param_var
+        self.par_dist = param_dist
+        self.par_reg = param_reg
+
+        def forward(self, prediction, label):
+        l_reg = 0
+        for batch in range(prediction.shape[0]):
+            center, unique = cal_center(prediction, label, batch)
+            l_reg += torch.sum(torch.norm(center, dim=0)) / unique
+
+        return self.par_var*self.var(prediction, label) + self.par_dist*self.dist(prediction, label)+self.par_reg*l_reg
+
+        def cal_center(prediction, label, batch):
+        unique = torch.unique(label[batch])
+        return torch.stack([torch.mean(prediction[batch, :, label[batch] == unique_label], dim=-1, keepdim=True)for unique_label in unique]), unique.shape[0]
+
+    class var_loss(nn.Module):
+        def __init__(self, d_var):
+            super().__init__()
+            self.d_var = d_var
+
+        def forward(prediction, label):
+            ret = 0
+            for batch in range(prediction.shape[0]):
+                unique = torch.unique(label[batch])
+                instance_loss = 0
+                for unique_label in unique:
+                    mask = label[batch] == unique_label
+                    point = prediction[batch, :, mask]
+                    center = torch.mean(point, dim=0)
+                    instance_loss += torch.sum(relu(torch.norm(point -
+                                                               center, dim=0)-self.d_var)**2)/point.shape[-1]
+                ret += instance_loss/unique.shape[0]
+
+            return ret
+
+    class dist_loss(nn.Module):
+        def __init__(self, d_dist):
+            self.d_dist = d_dist
+
+        def forward(prediction, label):
+            ret = 0
+            for batch in range(data.shape[0]):
+                loss = 0
+                center, unique = cal_center(prediction, label)
+                print(center.shape)
+                square_matrix = square_distance_single(center, center)
+                dist_matrix = torch.sqrt(square_matrix)
+                loss += torch.sum(relu(2*self.d_dist-dist_matrix)**2) /
+                (2 * unique * (unique - 1))
+            return loss
+
+        def square_distance_single(src, dst):
+        """
+        Calculate Euclid distance between each two points.
+        single batch version,to cal the dist between two points
+
+        src^T * dst = xn * xm + yn * ym + zn * zm；
+        sum(src^2, dim=-1) = xn*xn + yn*yn + zn*zn;
+        sum(dst^2, dim=-1) = xm*xm + ym*ym + zm*zm;
+        dist = (xn - xm)^2 + (yn - ym)^2 + (zn - zm)^2
+            = sum(src**2,dim=-1)+sum(dst**2,dim=-1)-2*src^T*dst
+
+        Input:
+            src: source points, [C, N]
+            dst: target points, [C, M]
+        Output:
+            dist: per-point square distance, [N, M]
+        """
+        _, N = src.shape
+        _, M = dst.shape
+        dist = -2 * torch.matmul(src.permute(1, 0), dst)
+        dist += torch.sum(src ** 2, 0).view(N, 1)
+        dist += torch.sum(dst ** 2, 0).view(1, M)
+        return dist.squeeze(-1)
