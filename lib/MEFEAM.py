@@ -114,7 +114,7 @@ def sample_and_group_knn(radius, nsample, xyz, points, use_xyz):
         use_xyz (Bool): if the function concat xyz with grouped points
     """
 
-    if point.device = 'cpu':
+    if point.device == 'cpu':
         knn = knn_indices_func_cpu
     else:
         knn = knn_indices_func_gpu
@@ -199,6 +199,15 @@ class MFEM(nn.Module):
             mlp_msf, mlp_global[-1], name="msf", activation=nn.ReLU)
 
     def forward(self, x):
+        """forward of MFEM
+
+        Args:
+            x (tensor): input pointcloud
+
+        Returns:
+            global_feature(Tensor):
+            msf_feature(Tensor):
+        """        
         #[B,C,N]->[B,C,nsample,N]
         point0 = self.sample_and_group(
             point_scale[0], self.nsample, x, x, False)
@@ -231,11 +240,12 @@ class LFAM(nn.module):
     LFAM module in MFEAM
     Args:
         nsample (int): nsample in sample and group
-        grouping (function):grouping method,knn or query_ball
         mlp (list): mlp structure used for feature fusion
         channel_in (int): input feature channel
+        grouping (function):grouping method,knn or query_ball,Defaults to knn.
     """
-    def __init__(self, nsample, grouping, mlp, channel_in,):
+
+    def __init__(self, nsample, mlp, channel_in, grouping=sample_and_group_knn):
         self.sample_and_group = grouping
         self.nsample = nsample
         self.mlp = mlp(mlp, channel_in, name='output mlp', activation=nn.ReLU)
