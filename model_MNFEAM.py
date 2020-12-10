@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
 from lib.ssn.ssn import soft_slic_all
-import torch.nn.functional as F
-from lib.MEFEAM import MFEM, LFAM, discriminative_loss
+from lib.MEFEAM.MEFEAM import MFEM, LFAM, discriminative_loss
 
 
 class MFEAM_SSN(nn.Module):
@@ -17,11 +16,11 @@ class MFEAM_SSN(nn.Module):
             self.channel += 3
 
         self.mfem = MFEM([32, 64], [128, 128], [64, 3], 32, 3, [
-                         0.2, 0.4, 0.6], kernel_start=[3, 1])
+                         0.2, 0.4, 0.6])
         self.lfam = LFAM(32, [128, 10], 131)
 
     def forward(self, x):
         global_feature, msf_feature = self.mfem(x)
         fusioned_feature = self.lfam(global_feature, msf_feature)
 
-        return soft_slic_all(fusioned_feature, fusioned_feature[:, :, :self.nspix], self.n_iter)
+        return soft_slic_all(fusioned_feature, fusioned_feature[:, :, :self.nspix], self.n_iter), msf_feature

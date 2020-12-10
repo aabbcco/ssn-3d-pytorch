@@ -42,8 +42,8 @@ def knn_indices_func_cpu(rep_pts: FloatTensor,  # (N, pts, dim)
     return region_idx
 
 
-def knn_indices_func_gpu(rep_pts: cuda.FloatTensor,  # (N, pts, dim)
-                         pts: cuda.FloatTensor,      # (N, x, dim)
+def knn_indices_func_gpu(rep_pts: cuda.FloatTensor,  # (N, pts, dim)->(N,dim,pts)
+                         pts: cuda.FloatTensor,      # (N, x, dim)->(N,dim,x)
                          k: int, d: int
                          ) -> cuda.LongTensor:         # (N, pts, K)
     """

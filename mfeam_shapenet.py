@@ -11,6 +11,7 @@ from lib.utils.meter import Meter
 from model_MNFEAM import MFEAM_SSN
 from lib.dataset import shapenet, augmentation
 from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse, uniform_compact_loss
+from lib.MEFEAM.MEFEAM import discriminative_loss
 
 
 @torch.no_grad()
@@ -52,7 +53,7 @@ def eval(model, loader, pos_scale, device):
     return sum_asa / len(loader)  # cal asa
 
 
-def update_param(data, model, optimizer, compactness,  pos_scale, device):
+def update_param(data, model, optimizer, compactness,  pos_scale, device, disc_loss):
     inputs, labels = data
 
     inputs = inputs.to(device)
@@ -60,20 +61,22 @@ def update_param(data, model, optimizer, compactness,  pos_scale, device):
 
     inputs = pos_scale*inputs
 
-    Q, H, _, _ = model(inputs)
+    (Q, H, _, _), msf_feature = model(inputs)
 
     recons_loss = reconstruct_loss_with_cross_etnropy(Q, labels)
     compact_loss = reconstruct_loss_with_mse(
         Q, inputs, H)
+    disc = disc_loss(msf_feature, labels)
+
     #uniform_compactness = uniform_compact_loss(Q,coords.reshape(*coords.shape[:2], -1), H,device=device)
 
-    loss = recons_loss + compactness * compact_loss
+    loss = recons_loss + compactness * compact_loss + disc
 
     optimizer.zero_grad()  # clear previous grad
     loss.backward()  # cal the grad
     optimizer.step()  # backprop
 
-    return {"loss": loss.item(), "reconstruction": recons_loss.item(), "compact": compact_loss.item()}
+    return {"loss": loss.item(), "reconstruction": recons_loss.item(), "compact": compact_loss.item(), "disc": disc.item()}
 
 
 def train(cfg):
@@ -84,16 +87,20 @@ def train(cfg):
 
     model = MFEAM_SSN(10, 50).to(device)
 
+    disc_loss = discriminative_loss(0.1, 0.1)
+
     optimizer = optim.Adam(model.parameters(), cfg.lr)
 
-    train_dataset = shapenet.shapenet(cfg.root)
+    train_dataset = shapenet.shapenet(cfg.root, split='test')
     train_loader = DataLoader(train_dataset, cfg.batchsize,
                               shuffle=True, drop_last=True, num_workers=cfg.nworkers)
 
-    test_dataset = shapenet.shapenet(cfg.root, split="test")
-    test_loader = DataLoader(test_dataset, 1, shuffle=False, drop_last=False)
+    # test_dataset = shapenet.shapenet(cfg.root, split="test")
+    # test_loader = DataLoader(test_dataset, 1, shuffle=False, drop_last=False)
 
     meter = Meter()
+
+
 
     iterations = 0
     max_val_asa = 0
@@ -102,7 +109,7 @@ def train(cfg):
         for data in train_loader:
             iterations += 1
             metric = update_param(
-                data, model, optimizer, cfg.compactness, cfg.pos_scale,  device)
+                data, model, optimizer, cfg.compactness, cfg.pos_scale,  device, disc_loss)
             meter.add(metric)
             state = meter.state(f"[{iterations}/{cfg.train_iter}]")
             print(state)
@@ -112,6 +119,7 @@ def train(cfg):
                               metric["reconstruction"], iterations)
             writer.add_scalar("loss/compact_loss",
                               metric["compact"], iterations)
+            writer.add_scalar("loss/disc_loss", metric["disc"], iterations)
             if (iterations % 1000) == 0:
                 torch.save(model.state_dict(), os.path.join(
                     cfg.out_dir, "model_iter"+str(iterations)+".pth"))
@@ -139,7 +147,7 @@ if __name__ == "__main__":
                         default='../shapenet_part_seg_hdf5_data', help="/ path/to/shapenet")
     parser.add_argument("--out_dir", default="./log",
                         type=str, help="/path/to/output directory")
-    parser.add_argument("--batchsize", default=12, type=int)
+    parser.add_argument("--batchsize", default=8, type=int)
     parser.add_argument("--nworkers", default=8, type=int,
                         help="number of threads for CPU parallel")
     parser.add_argument("--lr", default=1e-6, type=float, help="learning rate")
