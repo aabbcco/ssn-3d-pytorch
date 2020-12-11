@@ -54,7 +54,7 @@ def eval(model, loader, pos_scale, device):
 
 
 def update_param(data, model, optimizer, compactness,  pos_scale, device, disc_loss):
-    inputs, labels = data
+    inputs, labels, labels_num = data
 
     inputs = inputs.to(device)
     labels = labels.to(device)
@@ -66,7 +66,7 @@ def update_param(data, model, optimizer, compactness,  pos_scale, device, disc_l
     recons_loss = reconstruct_loss_with_cross_etnropy(Q, labels)
     compact_loss = reconstruct_loss_with_mse(
         Q, inputs, H)
-    disc = disc_loss(msf_feature, labels)
+    disc = disc_loss(msf_feature, labels_num)
 
     #uniform_compactness = uniform_compact_loss(Q,coords.reshape(*coords.shape[:2], -1), H,device=device)
 

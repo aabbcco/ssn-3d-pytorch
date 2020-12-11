@@ -281,11 +281,6 @@ class LFAM(nn.Module):
         return maxed_feature
 
 
-def cal_center(prediction, label, batch):
-    unique = torch.unique(label[batch])
-    return torch.stack([torch.mean(prediction[batch, :, label[batch] == unique_label], dim=-1, keepdim=True) for unique_label in unique]), unique.shape[0]
-
-
 class var_loss(nn.Module):
     def __init__(self, d_var):
         super().__init__()
@@ -308,17 +303,21 @@ class var_loss(nn.Module):
 
 class dist_loss(nn.Module):
     def __init__(self, d_dist):
+        super().__init__()
         self.d_dist = d_dist
 
     def forward(self, prediction, label):
         loss = 0
-        for batch in range(data.shape[0]):
-            center, unique = cal_center(prediction, label, batch)
-            print(center.shape)
-            square_matrix = square_distance_single(center, center)
-            dist_matrix = torch.sqrt(square_matrix)
-            loss += torch.sum(relu(2*self.d_dist-dist_matrix)
-                              ** 2) / (2 * unique * (unique - 1))
+        for batch in range(prediction.shape[0]):
+            unique = torch.unique(label[batch])
+            if unique.shape[0] != 1:
+                center = torch.stack([torch.mean(
+                    prediction[batch, :, label[batch] == unique_label], dim=-1, keepdim=True)for unique_label in unique])
+                center = center.squeeze(-1)
+                square_matrix = relu(square_distance_single(center, center))
+                dist_matrix = torch.sqrt(square_matrix)
+                loss += torch.sum(relu(2*self.d_dist-dist_matrix)
+                                  ** 2) / (2 * unique.shape[0] * (unique.shape[0] - 1.0+1e-16))
         return loss
 
 
@@ -347,13 +346,18 @@ class discriminative_loss(nn.Module):
     def forward(self, prediction, label):
         l_reg = 0
         for batch in range(prediction.shape[0]):
-            center, unique = cal_center(prediction, label, batch)
-            l_reg += torch.sum(torch.norm(center, dim=0)) / unique
+            unique = torch.unique(label[batch])
+            center = torch.stack([torch.mean(prediction[batch, :, label[batch]
+                                                       
+                                                        == unique_label], dim=-1, keepdim=True)for unique_label in unique])
+            l_reg += torch.sum(torch.norm(center, dim=0)) / unique.shape[0]
 
-        return self.par_var*self.var(prediction, label) + self.par_dist*self.dist(prediction, label)+self.par_reg*l_reg
+        var = self.var(prediction, label)
+        dist = self.dist(prediction, label)
+        return self.par_var*var + self.par_dist*dist+self.par_reg*l_reg
 
 
-def square_distance_single(self, src, dst):
+def square_distance_single(src, dst):
     """
         Calculate Euclid distance between each two points.
         single batch version,to cal the dist between two points
