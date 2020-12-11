@@ -91,7 +91,7 @@ def train(cfg):
 
     optimizer = optim.Adam(model.parameters(), cfg.lr)
 
-    train_dataset = shapenet.shapenet(cfg.root, split='test')
+    train_dataset = shapenet.shapenet(cfg.root)
     train_loader = DataLoader(train_dataset, cfg.batchsize,
                               shuffle=True, drop_last=True, num_workers=cfg.nworkers)
 
