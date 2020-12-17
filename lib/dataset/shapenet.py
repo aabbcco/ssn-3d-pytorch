@@ -38,6 +38,8 @@ class shapenet(Dataset):
         datafile = open(os.path.join(datafolder, self.listname), 'r')
         flist = datafile.readlines()
         for fname in flist:
+            #too slow,find a way to boost it
+            #fucking GIL
             f = h5py.File(os.path.join(datafolder, fname.split('\n')[0]), 'r')
             self.data.extend(f['data'])
             self.label.extend(f['pid'])
@@ -47,7 +49,7 @@ class shapenet(Dataset):
         # self.label = np.array(labels)
 
     def __getitem__(self, idx):
-        return Tensor(self.data[idx]).transpose(1, 0), Tensor(convert_label(self.label[idx]))
+        return Tensor(self.data[idx]).transpose(1, 0), Tensor(convert_label(self.label[idx])), self.label[idx]
 
     def __len__(self):
         return len(self.data)
