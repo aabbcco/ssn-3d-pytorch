@@ -121,7 +121,7 @@ def sample_and_group_knn(radius, nsample, xyz, points, use_xyz=False):
 
     idx = knn(xyz.permute(0, 2, 1), points.permute(0, 2, 1), nsample, 1)
     grouped_points = torch.stack(
-        [torch.stack([x[:, idxxx] for idxxx in idxx], dim=-1) for idxx, x in zip(idx, points)])
+        [torch.stack([x[:, idxxx] for idxxx in idxx], dim=1) for idxx, x in zip(idx, points)])
 
     if use_xyz:
         grouped_xyz = xyz.unsquezze(2).repeat(1, 1, nsample, 1)

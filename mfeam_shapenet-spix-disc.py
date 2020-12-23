@@ -142,7 +142,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--root", type=str,
-                        default='../shapenet_part_seg_hdf5_data', help="/ path/to/shapenet")
+                        default= '../shapenet_partseg_spix' , help="/ path/to/shapenet")
     parser.add_argument("--out_dir", default="./log",
                         type=str, help="/path/to/output directory")
     parser.add_argument("--batchsize", default=8, type=int)
