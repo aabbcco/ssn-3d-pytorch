@@ -52,11 +52,12 @@ def eval(model, loader, pos_scale, device):
     return sum_asa / len(loader)  # cal asa
 
 
-def update_param(data, model, optimizer, compactness,  pos_scale, spix_weig):
+def update_param(data, model, optimizer, compactness,  pos_scale, spix_weig, device):
     inputs, labels, spix = data
 
-    inputs = inputs.to(model.device)
-    labels = labels.to(model.device)
+    inputs = inputs.to(device)
+    labels = labels.to(device)
+    spix   = spix.to(device)
 
     inputs = pos_scale*inputs
 
@@ -103,7 +104,7 @@ def train(cfg):
         for data in train_loader:
             iterations += 1
             metric = update_param(
-                data, model, optimizer, cfg.compactness, cfg.pos_scale,  device)
+                data, model, optimizer, cfg.compactness, cfg.pos_scale, cfg.spix, device)
             meter.add(metric)
             state = meter.state(f"[{iterations}/{cfg.train_iter}]")
             print(state)

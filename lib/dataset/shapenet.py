@@ -5,6 +5,21 @@ import h5py
 import numpy as np
 
 
+def convert_label(label):
+
+    onehot = np.zeros(
+        (50, label.shape[0])).astype(np.float32)
+
+    ct = 0
+    for t in np.unique(label).tolist():
+        if ct >= 50:
+            break
+        else:
+            onehot[ct, :] = (label == t)
+        ct = ct + 1
+
+    return onehot
+
 def getFiles_full(path, suffix):
     return [os.path.join(root, file) for root, dirs, files in os.walk(path) for file in files if file.endswith(suffix)]
 
@@ -58,7 +73,7 @@ class shapenet_spix(Dataset):
         self.spix = np.concatenate(spixlist, axis=0)
 
     def __getitem__(self, idx):
-        return Tensor(self.data[idx]), Tensor(self.label[idx]), Tensor(self.spix[idx])
+        return Tensor(self.data[idx]), Tensor(convert_label(self.label[idx])), Tensor(convert_label(self.spix[idx]))
 
     def __len__(self):
         return len(self.data)
