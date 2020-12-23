@@ -240,16 +240,16 @@ class MFEM(nn.Module):
         point2 = self.scale2(point2)
 
         # ->[B,C,N]
-        point0, _ = point0.max(2)
-        point1, _ = point1.max(2)
-        point2, _ = point2.max(2)
+        point0, _ = point0.max(-1)
+        point1, _ = point1.max(-1)
+        point2, _ = point2.max(-1)
 
         # ->[B,C]
         # \->[B,m,N]
         point = torch.cat([point0, point1, point2], dim=1)
         global_feature = self.mlp_global(point)
         msf_feature = self.mlp_MSF(global_feature)
-        global_feature, _ = torch.max(global_feature, dim=2)
+        global_feature, _ = torch.max(global_feature, dim=-1)
         return global_feature, msf_feature
 
 
