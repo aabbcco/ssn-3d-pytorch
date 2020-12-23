@@ -73,7 +73,7 @@ class shapenet_spix(Dataset):
         self.spix = np.concatenate(spixlist, axis=0)
 
     def __getitem__(self, idx):
-        return Tensor(self.data[idx]), Tensor(convert_label(self.label[idx])), Tensor(convert_label(self.spix[idx]))
+        return Tensor(self.data[idx]), Tensor(convert_label(self.label[idx])), Tensor(convert_label(self.spix[idx])), Tensor(self.spix[idx])
 
     def __len__(self):
         return len(self.data)
