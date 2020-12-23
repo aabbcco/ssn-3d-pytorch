@@ -273,10 +273,10 @@ class LFAM(nn.Module):
     def forward(self, global_feature, msf):
         msf_grouped = self.sample_and_group(1, self.nsample, msf, msf)
         global_reapeted = global_feature.view(global_feature.shape[0], -1, 1, 1).repeat(
-            1, 1, self.nsample, msf.shape[-1])
+            1, 1, msf.shape[-1], self.nsample)
         contacted_feature = torch.cat([global_reapeted, msf_grouped], dim=1)
         mixed_feature = self.mlp_fu(contacted_feature)
-        maxed_feature, _ = mixed_feature.max(2)
+        maxed_feature, _ = mixed_feature.max(-1)
 
         return maxed_feature
 
