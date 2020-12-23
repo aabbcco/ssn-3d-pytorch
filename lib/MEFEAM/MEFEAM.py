@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn.functional import relu
-from ..utils.util_funcs import knn_indices_func_cpu, knn_indices_func_gpu
+from util_funcs import knn_indices_func_cpu, knn_indices_func_gpu
 
 # square_distance,query_ball point and fps sampling comes from github repository Pointnet_Point2_Pytorch
 # minor changes are made to fit [B,C,N] tensors instead of[B,N,C]
