@@ -110,6 +110,7 @@ def train(cfg):
             print(state)
             # return {"loss": loss.item(), "reconstruction": recons_loss.item(), "compact": compact_loss.item()}
             writer.add_scalar("comprehensive/loss", metric["loss"], iterations)
+            writer.add_scalar("loss/spix", metric["spix"], iterations)
             writer.add_scalar("loss/reconstruction_loss",
                               metric["reconstruction"], iterations)
             writer.add_scalar("loss/compact_loss",
@@ -154,7 +155,7 @@ if __name__ == "__main__":
                         help="number of superpixels")
     parser.add_argument("--pos_scale", default=10, type=float)
     parser.add_argument("--compactness", default=1e-4, type=float)
-    parser.add_argument('--spix', default=0.5, type=float)
+    parser.add_argument('--spix', default=0.2, type=float)
     parser.add_argument("--test_interval", default=100, type=int)
 
     args = parser.parse_args()
