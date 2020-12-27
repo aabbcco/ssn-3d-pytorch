@@ -4,49 +4,29 @@ import torch
 import os
 
 from skimage.color import rgb2lab
-from lib.dataset.shapenet import shapenet
+from lib.dataset.shapenet import shapenet, shapenet_spix
 from lib.utils.pointcloud_io import write
 from torch.utils.data import DataLoader
 from lib.ssn.ssn import soft_slic_all
+from model_ptnet import PointNet_SSN
 
 
 @torch.no_grad()
-def inference(pointcloud, nspix, n_iter, fdim=None, pos_scale=10, weight=None):
-    """
-    generate superpixels
+def inference(pointcloud, pos_scale=10, weight=None):
+    """generate 3d spix
 
     Args:
-        image: numpy.ndarray
-            An array of shape (h, w, c)
-        nspix: int
-            number of superpixels
-        n_iter: int
-            number of iterations
-        fdim (optional): int
-            feature dimension for supervised setting
-        color_scale: float
-            color channel factor
-        pos_scale: float
-            pixel coordinate factor
-        weight: state_dict
-            pretrained weight
-        enforce_connectivity: bool
-            if True, enforce superpixel connectivity in postprocessing
+        pointcloud (Tensor): Tensor of input pointcloud
+        pos_scale (int, optional): coordinate multpilter. Defaults to 10.
+        weight ([type], optional): model itself. Defaults to None.
 
-    Return:
-        labels: numpy.ndarray
-            An array of shape (h, w)
+    Returns:
+        [type]: [description]
     """
     if weight is not None:
-        from model_ptnet import PointNet_SSN
-        model = PointNet_SSN(fdim, nspix, n_iter).to("cuda")
-        model.load_state_dict(torch.load(weight))
-        model.eval()
+        model = weight
     else:
-        def model(data): return soft_slic_all(data, data[:, :, :nspix], n_iter)
-
-    print(model)
-
+        raise Exception('model not loaded')
     inputs = pos_scale * pointcloud
     inputs = inputs.to("cuda")
 
@@ -77,17 +57,31 @@ if __name__ == "__main__":
     parser.add_argument("--pos_scale", default=10, type=float)
     args = parser.parse_args()
 
-    data = shapenet("../shapenet_part_seg_hdf5_data", split='test')
+    data = shapenet("../shapenet_part_seg_hdf5_data",
+                    split='val', onehot=False)
     loader = DataLoader(data, batch_size=1, shuffle=False)
+    model = PointNet_SSN(args.fdim, args.nspix, args.n_iter).to("cuda")
+    model.load_state_dict(torch.load(args.weight))
+    model.eval()
+    print(model)
 
-    pointcloud, label = iter(loader).next()
     s = time.time()
-    Q, label, center, feature = inference(pointcloud, args.nspix, args.niter,
-                              args.fdim, args.pos_scale, args.weight)
-    print(f"time {time.time() - s}sec")
-    np.savetxt("Q.csv", np.squeeze(Q, 0), fmt="%.8e", delimiter=",")
-    np.savetxt("center.csv", np.squeeze(center, 0), fmt="%.10e", delimiter=",")
-    np.savetxt("feature.csv" np.squeeze(feature, 0), fmt="%.10e", delimiter=",")
-    ptcloud = pointcloud.squeeze(0).permute(1, 0).numpy()
-    ptcloud = np.concatenate((ptcloud, label.transpose(1, 0)), axis=-1)
-    write.tobcd(ptcloud, 'xyzl', 'shapenet_pred.pcd')
+
+    for i, (pointcloud, label, spix, spixx) in enumerate(loader):
+        _, labels, _, _ = inference(pointcloud, model)
+
+        pointcloud = pointcloud.squeeze(0).transpose(1, 0).numpy()
+        label = label.squeeze(0).transpose(1, 0).numpy()
+        spix = spix.squeeze(0).transpose(1,  0).numpy()
+        ptcloud = np.concatenate(
+            (pointcloud, label, spix, labels.transpose(1, 0)),  axis=-1)
+        write.tobcd(ptcloud,  'xyzrgb', '{}.pcd'.format(i))
+        # Q, label, center, feature = inference(pointcloud, args.nspix, args.niter,
+        #                           args.fdim, args.pos_scale, args.weight)
+        # print(f"time {time.time() - s}sec")
+        # np.savetxt("Q.csv", np.squeeze(Q, 0), fmt="%.8e", delimiter=",")
+        # np.savetxt("center.csv", np.squeeze(center, 0), fmt="%.10e", delimiter=",")
+        # np.savetxt("feature.csv" np.squeeze(feature, 0), fmt="%.10e", delimiter=",")
+        # ptcloud = pointcloud.squeeze(0).permute(1, 0).numpy()
+        # ptcloud = np.concatenate((ptcloud, label.transpose(1, 0)), axis=-1)
+        # write.tobcd(ptcloud, 'xyzl', 'shapenet_pred.pcd')

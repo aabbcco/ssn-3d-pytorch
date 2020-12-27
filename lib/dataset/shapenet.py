@@ -56,7 +56,7 @@ class shapenet(Dataset):
 
 
 class shapenet_spix(Dataset):
-    def __init__(self, datafolder, split='train'):
+    def __init__(self, datafolder, split='train', onehot=True):
         assert split in ['train', 'val', 'test'], "split not exist"
         filepath = os.path.join(datafolder, split)
         datalist = []
@@ -71,9 +71,15 @@ class shapenet_spix(Dataset):
         self.data = np.concatenate(datalist,axis=0).transpose(0,2,1)
         self.label = np.concatenate(labelist, axis=0)
         self.spix = np.concatenate(spixlist, axis=0)
+        self.onehot = onehot
 
     def __getitem__(self, idx):
-        return Tensor(self.data[idx]), Tensor(convert_label(self.label[idx])), Tensor(convert_label(self.spix[idx])), Tensor(self.spix[idx])
+        label = self.label[idx]
+        spix = self.spix[idx]
+        if self.onehot:
+            label = convert_label(label)
+            spix = convert_label(spix)
+        return Tensor(self.data[idx]), Tensor(label), Tensor(spix), Tensor(self.spix[idx])
 
     def __len__(self):
         return len(self.data)
