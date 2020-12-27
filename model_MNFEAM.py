@@ -5,7 +5,7 @@ from lib.MEFEAM.MEFEAM import MFEM, LFAM, discriminative_loss
 
 
 class MFEAM_SSN(nn.Module):
-    def __init__(self, feature_dim, nspix, n_iter=10, RGB=False, normal=False):
+    def __init__(self, feature_dim, nspix, mfem_dim=6, n_iter=10, RGB=False, normal=False):
         super().__init__()
         self.nspix = nspix
         self.n_iter = n_iter
@@ -15,7 +15,7 @@ class MFEAM_SSN(nn.Module):
         if normal:
             self.channel += 3
 
-        self.mfem = MFEM([32, 64], [128, 128], [64, 3], 32, 3, [
+        self.mfem = MFEM([32, 64], [128, 128], [64, mfem_dim], 32, 3, [
                          0.2, 0.4, 0.6])
         self.lfam = LFAM(32, [128, 10], 131)
 
