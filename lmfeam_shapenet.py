@@ -3,15 +3,36 @@ import math
 import numpy as np
 import time
 import torch
+from torch.nn import Module
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 
 from lib.utils.meter import Meter
-from model_MNFEAM import MFEAM_SSN
-from lib.dataset.shapenet import shapenet_spix
+from lib.dataset import shapenet, augmentation
 from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse, uniform_compact_loss
-from lib.MEFEAM.MEFEAM import discriminative_loss
+from lib.MEFEAM.MEFEAM import discriminative_loss, LMFEAM
+
+from lib.ssn.ssn import soft_slic_all
+
+
+class LMFEAM_SSN(Module):
+    def __init__(self, feature_dim, nspix, mfem_dim=6, n_iter=10, RGB=False, normal=False):
+        super().__init__()
+        self.nspix = nspix
+        self.n_iter = n_iter
+        self.channel = 3
+        if RGB:
+            self.channel += 3
+        if normal:
+            self.channel += 3
+        #[32, 64], [128, 128], [64, mfem_dim], 32,3 , [0.2, 0.4, 0.6]
+        self.lmfeam = LMFEAM([32, 64], [128, 128], [64, mfem_dim], [
+                             128, 64, feature_dim], 32, self.channel, point_scale=[0.2, 0.4, 0.6])
+
+    def forward(self, x):
+        feature, msf = self.lmfeam(x)
+        return soft_slic_all(feature, feature[:, :, :self.nspix], self.n_iter), msf
 
 
 @torch.no_grad()
@@ -54,7 +75,7 @@ def eval(model, loader, pos_scale, device):
 
 
 def update_param(data, model, optimizer, compactness,  pos_scale, device, disc_loss):
-    inputs, labels, _, spix = data
+    inputs, labels, labels_num = data
 
     inputs = inputs.to(device)
     labels = labels.to(device)
@@ -66,7 +87,7 @@ def update_param(data, model, optimizer, compactness,  pos_scale, device, disc_l
     recons_loss = reconstruct_loss_with_cross_etnropy(Q, labels)
     compact_loss = reconstruct_loss_with_mse(
         Q, inputs, H)
-    disc = disc_loss(msf_feature, spix)
+    disc = disc_loss(msf_feature, labels_num)
 
     #uniform_compactness = uniform_compact_loss(Q,coords.reshape(*coords.shape[:2], -1), H,device=device)
 
@@ -85,13 +106,13 @@ def train(cfg):
     else:
         device = "cpu"
 
-    model = MFEAM_SSN(10, 50).to(device)
+    model = LMFEAM_SSN(10, 50).to(device)  # LMFEAM(10, 50).to(device)
 
-    disc_loss = discriminative_loss(0.1, 0.5)
+    disc_loss = discriminative_loss(0.1, 0.1)
 
     optimizer = optim.Adam(model.parameters(), cfg.lr)
 
-    train_dataset = shapenet_spix(cfg.root)
+    train_dataset = shapenet.shapenet(cfg.root)
     train_loader = DataLoader(train_dataset, cfg.batchsize,
                               shuffle=True, drop_last=True, num_workers=cfg.nworkers)
 
@@ -101,7 +122,6 @@ def train(cfg):
     meter = Meter()
 
     iterations = 0
-    max_val_asa = 0
     writer = SummaryWriter(log_dir='log', comment='traininglog')
     while iterations < cfg.train_iter:
         for data in train_loader:
@@ -121,14 +141,6 @@ def train(cfg):
             if (iterations % 1000) == 0:
                 torch.save(model.state_dict(), os.path.join(
                     cfg.out_dir, "model_iter"+str(iterations)+".pth"))
-            # if (iterations % cfg.test_interval) == 0:
-            #     asa = eval(model, test_loader, cfg.pos_scale,  device)
-            #     print(f"validation asa {asa}")
-            #     writer.add_scalar("comprehensive/asa", asa, iterations)
-            #     if asa > max_val_asa:
-            #         max_val_asa = asa
-            #         torch.save(model.state_dict(), os.path.join(
-            #             cfg.out_dir, "bset_model_sp_loss.pth"))
             if iterations == cfg.train_iter:
                 break
 
@@ -142,7 +154,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--root", type=str,
-                        default= '../shapenet_partseg_spix' , help="/ path/to/shapenet")
+                        default='../shapenet_part_seg_hdf5_data', help="/ path/to/shapenet")
     parser.add_argument("--out_dir", default="./log",
                         type=str, help="/path/to/output directory")
     parser.add_argument("--batchsize", default=8, type=int)
@@ -154,7 +166,7 @@ if __name__ == "__main__":
                         help="embedding dimension")
     parser.add_argument("--niter", default=5, type=int,
                         help="number of iterations for differentiable SLIC")
-    parser.add_argument("--nspix", default=50, type=int,
+    parser.add_argument("--nspix", default=100, type=int,
                         help="number of superpixels")
     parser.add_argument("--pos_scale", default=10, type=float)
     parser.add_argument("--compactness", default=1e-4, type=float)

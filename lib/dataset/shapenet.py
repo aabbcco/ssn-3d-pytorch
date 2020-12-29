@@ -49,7 +49,7 @@ class shapenet(Dataset):
         self.label = np.concatenate(labelist, axis=0)
 
     def __getitem__(self, idx):
-        return Tensor(self.data[idx]), Tensor(self.label[idx])
+        return Tensor(self.data[idx]), Tensor(convert_label(self.label[idx])), Tensor(self.label[idx])
 
     def __len__(self):
         return len(self.data)

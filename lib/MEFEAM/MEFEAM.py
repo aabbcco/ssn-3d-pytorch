@@ -186,7 +186,7 @@ class mlp(nn.Module):
 
 class MFEM(nn.Module):
     """
-    MFEM module
+    origional MFEM module
     Args:
         mlp_multiscale (list): sequence to construct multi_scale_mlp
         mlp_global(list):sequence to construct mlp for global feature
@@ -195,7 +195,6 @@ class MFEM(nn.Module):
         channel_in (int): input channel
         point_scale (list): scales
         grouping (function): query_ball or knn
-        kernel_start (tuple, optional): first kernel in mlp,Defaults to (1, 1).
     """
 
     def __init__(self, mlp_multiscale, mlp_global, mlp_msf, nsample, channel_in, point_scale, grouping=sample_and_group_knn):
@@ -281,6 +280,88 @@ class LFAM(nn.Module):
         return maxed_feature
 
 
+class LMFEAM(nn.Module):
+    """MFEAM with low level features
+
+    Args:
+        mlp_multiscale (list): sequence to construct multi_scale_mlp
+        mlp_global (list): sequence to construct mlp for global feature
+        mlp_msf (list): sequence to construct mlp for Multi-Scale Locality Feature Spaces
+        mlp_fushion (list): mlp structure used for feature fusion
+        nsample ([type]): knn sample
+        channel_in ([type]): input channel
+        point_scale ([type]): scales
+        grouping ([type], optional): query_ball or knn. Defaults to sample_and_group_knn.
+    """
+
+    def __init__(self, mlp_multiscale, mlp_global, mlp_msf, mlp_fushion, nsample, channel_in, point_scale, grouping=sample_and_group_knn):
+
+        super().__init__()
+
+        #MFEM part
+        self.sample_and_group = grouping
+        self.nsample = nsample
+        self.scale = point_scale
+
+        self.scale0 = mlp_2d(mlp_multiscale, channel_in, 'scale0', nn.ReLU)
+        self.scale1 = mlp_2d(mlp_multiscale, channel_in, 'scale1', nn.ReLU)
+        self.scale2 = mlp_2d(mlp_multiscale, channel_in, 'scale2', nn.ReLU)
+
+        self.mlp_global = mlp(
+            mlp_global, 3*mlp_multiscale[-1], name='global', activation=nn.ReLU)
+
+        self.mlp_MSF = mlp(
+            mlp_msf, mlp_global[-1], name="msf", activation=nn.ReLU)
+        #LFAM part
+        self.mlp_fu = mlp_2d(mlp_fushion, mlp_global[-1]+mlp_msf[-1],
+                             name='output mlp', activation=nn.ReLU)
+
+    def forward(self, x):
+        """forward of LMFEAM
+
+        Args:
+            x (tensor): input pointcloud
+
+        Returns:
+            global_feature(Tensor):
+            msf_feature(Tensor):
+        """
+        #MFEM
+        # [B,C,N]->[B,C,nsample,N]
+        point0 = self.sample_and_group(
+            self.scale[0], self.nsample, x, x, False)
+        point1 = self.sample_and_group(
+            self.scale[1], self.nsample, x, x, False)
+        point2 = self.sample_and_group(
+            self.scale[2], self.nsample, x, x, False)
+
+        # ->[B,C,nsample,N]
+        point0 = self.scale0(point0)
+        point1 = self.scale1(point1)
+        point2 = self.scale2(point2)
+
+        # ->[B,C,N]
+        point0, _ = point0.max(-1)
+        point1, _ = point1.max(-1)
+        point2, _ = point2.max(-1)
+
+        # ->[B,C,N]
+        # \->[B,m,N]
+        point = torch.cat([point0, point1, point2], dim=1)
+        pointwise_global = self.mlp_global(point)
+        msf = self.mlp_MSF(pointwise_global)
+
+        #LFAM part
+        #[B,m,nsample,N]
+        msf_grouped = self.sample_and_group(1, self.nsample, msf, msf)
+        global_reapeted = torch.unsqueeze(
+            pointwise_global, -1).repeat(1, 1, 1, self.nsample)
+        contacted_feature = torch.cat([global_reapeted, msf_grouped], dim=1)
+        mixed_feature = self.mlp_fu(contacted_feature)
+        maxed_feature, _ = mixed_feature.max(-1)
+
+        return maxed_feature, msf
+
 class var_loss(nn.Module):
     def __init__(self, d_var):
         super().__init__()
@@ -321,6 +402,8 @@ class dist_loss(nn.Module):
         return loss
 
 
+
+
 class discriminative_loss(nn.Module):
     """
     reimplemention of discriminative loss in ASIS using Pytorch\n
@@ -348,7 +431,7 @@ class discriminative_loss(nn.Module):
         for batch in range(prediction.shape[0]):
             unique = torch.unique(label[batch])
             center = torch.stack([torch.mean(prediction[batch, :, label[batch]
-                                                       
+
                                                         == unique_label], dim=-1, keepdim=True)for unique_label in unique])
             l_reg += torch.sum(torch.norm(center, dim=0)) / unique.shape[0]
 
