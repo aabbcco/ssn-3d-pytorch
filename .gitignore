@@ -1,5 +1,6 @@
 *.png
 log/
+log*/
 __pycache__/
 settings.json
 *.jpg
