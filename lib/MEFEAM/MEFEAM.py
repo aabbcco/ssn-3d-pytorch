@@ -124,8 +124,8 @@ def sample_and_group_knn(radius, nsample, xyz, points, use_xyz=False):
         [torch.stack([x[:, idxxx] for idxxx in idxx], dim=1) for idxx, x in zip(idx, points)])
 
     if use_xyz:
-        grouped_xyz = xyz.unsquezze(2).repeat(1, 1, nsample, 1)
-        return torch.cat([grouped_xyz, grouped_points], -1)
+        grouped_xyz = xyz.unsqueeze(2).repeat(1, 1, nsample, 1)
+        return torch.cat([grouped_xyz.permute(0, 1, 3, 2), grouped_points], -1)
     else:
         return grouped_points
 
@@ -329,9 +329,9 @@ class LMFEAM(nn.Module):
         #MFEM
         # [B,C,N]->[B,C,nsample,N]
         point0 = self.sample_and_group(
-            self.scale[0], self.nsample/4, x, x, True)
+            self.scale[0], 8, x, x, True)
         point1 = self.sample_and_group(
-            self.scale[1], self.nsample/2, x, x, True)
+            self.scale[1], 16, x, x, True)
         point2 = self.sample_and_group(
             self.scale[2], self.nsample, x, x, True)
 
