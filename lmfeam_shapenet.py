@@ -87,7 +87,7 @@ def update_param(data, model, optimizer, compactness,  pos_scale, device, disc_l
     recons_loss = reconstruct_loss_with_cross_etnropy(Q, labels)
     compact_loss = reconstruct_loss_with_mse(
         Q, inputs, H)
-    disc = disc_loss(msf_feature, labels_num)
+    disc = disc_loss(msf_feature, H)
 
     #uniform_compactness = uniform_compact_loss(Q,coords.reshape(*coords.shape[:2], -1), H,device=device)
 
@@ -157,7 +157,7 @@ if __name__ == "__main__":
                         default='../shapenet_part_seg_hdf5_data', help="/ path/to/shapenet")
     parser.add_argument("--out_dir", default="./log",
                         type=str, help="/path/to/output directory")
-    parser.add_argument("--batchsize", default=8, type=int)
+    parser.add_argument("--batchsize", default=16, type=int)
     parser.add_argument("--nworkers", default=8, type=int,
                         help="number of threads for CPU parallel")
     parser.add_argument("--lr", default=1e-6, type=float, help="learning rate")
