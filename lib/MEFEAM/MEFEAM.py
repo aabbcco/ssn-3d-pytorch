@@ -329,11 +329,11 @@ class LMFEAM(nn.Module):
         #MFEM
         # [B,C,N]->[B,C,nsample,N]
         point0 = self.sample_and_group(
-            self.scale[0], self.nsample, x, x, False)
+            self.scale[0], self.nsample/4, x, x, True)
         point1 = self.sample_and_group(
-            self.scale[1], self.nsample, x, x, False)
+            self.scale[1], self.nsample/2, x, x, True)
         point2 = self.sample_and_group(
-            self.scale[2], self.nsample, x, x, False)
+            self.scale[2], self.nsample, x, x, True)
 
         # ->[B,C,nsample,N]
         point0 = self.scale0(point0)
