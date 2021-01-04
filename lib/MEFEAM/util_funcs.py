@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.neighbors import NearestNeighbors
 from typing import Union
-
+from time import time
 #comes from PointCNN.Pytorch repository
 #https://github.com/hxdengBerkeley/PointCNN.Pytorch.git
 
@@ -27,6 +27,7 @@ def knn_indices_func_cpu(rep_pts: FloatTensor,  # (N, pts, dim)
     :return: Array of indices, P_idx, into pts such that pts[n][P_idx[n],:]
     is the set k-nearest neighbors for the representative points in pts[n].
     """
+    time1 = time()
     rep_pts = rep_pts.data.numpy()
     pts = pts.data.numpy()
     region_idx = []
@@ -39,6 +40,7 @@ def knn_indices_func_cpu(rep_pts: FloatTensor,  # (N, pts, dim)
         region_idx.append(indices[:, 1::D])
 
     region_idx = torch.from_numpy(np.stack(region_idx, axis=0))
+    print("using cpu,time:{}s".format(time()-time1))
     return region_idx
 
 
@@ -56,6 +58,7 @@ def knn_indices_func_gpu(rep_pts: cuda.FloatTensor,  # (N, pts, dim)->(N,dim,pts
     :return: Array of indices, P_idx, into pts such that pts[n][P_idx[n],:]
     is the set k-nearest neighbors for the representative points in pts[n].
     """
+    time1 = time()
     region_idx = []
 
     for n, qry in enumerate(rep_pts):
@@ -69,4 +72,5 @@ def knn_indices_func_gpu(rep_pts: cuda.FloatTensor,  # (N, pts, dim)->(N,dim,pts
         region_idx.append(inds[:, 1::d])
 
     region_idx = torch.stack(region_idx, dim=0)
+    print("using gpu,time:{}s".format(time()-time1))
     return region_idx
