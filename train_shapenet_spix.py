@@ -142,7 +142,7 @@ if __name__ == "__main__":
                         default='../shapenet_part_seg_hdf5_data', help="/ path/to/shapenet")
     parser.add_argument("--out_dir", default="./log",
                         type=str, help="/path/to/output directory")
-    parser.add_argument("--batchsize", default=12, type=int)
+    parser.add_argument("--batchsize", default=20, type=int)
     parser.add_argument("--nworkers", default=8, type=int,
                         help="number of threads for CPU parallel")
     parser.add_argument("--lr", default=1e-6, type=float, help="learning rate")

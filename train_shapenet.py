@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 
 from lib.utils.meter import Meter
-from model_ptnet import PointNet_SSN
+from model_ptnet import PointNet_SSN, PointNet_SSKNN
 from lib.dataset import shapenet, augmentation
 from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse, uniform_compact_loss
 
@@ -36,7 +36,7 @@ def eval(model, loader, pos_scale, device):
     model.eval()  # change the mode of model to eval
     sum_asa = 0
     for data in loader:
-        inputs, labels = data  # b*c*npoint
+        inputs, labels, _ = data  # b*c*npoint
 
         inputs = inputs.to(device)  # b*c*w*h
         labels = labels.to(device)  # sematic_lable
@@ -53,7 +53,7 @@ def eval(model, loader, pos_scale, device):
 
 
 def update_param(data, model, optimizer, compactness,  pos_scale, device):
-    inputs, labels = data
+    inputs, labels, _ = data
 
     inputs = inputs.to(device)
     labels = labels.to(device)
@@ -82,7 +82,7 @@ def train(cfg):
     else:
         device = "cpu"
 
-    model = PointNet_SSN(cfg.fdim, cfg.nspix, cfg.niter).to(device)
+    model = PointNet_SSKNN(cfg.fdim, cfg.nspix, cfg.niter).to(device)
 
     optimizer = optim.Adam(model.parameters(), cfg.lr)
 

@@ -1,6 +1,8 @@
 import math
 import torch
+from torch import softmax
 from torch.nn.functional import pairwise_distance
+from .util_funcs import knn_indices_func_cpu, knn_indices_func_gpu
 
 # from .pair_wise_distance import PairwiseDistFunction
 # from ..utils.sparse_utils import naive_sparse_bmm
@@ -136,3 +138,61 @@ def soft_slic_all(point, seed,   n_iter=10):
                 QT.sum(2, keepdim=True)).permute(0, 2, 1)
     _, hard_label = QT.permute(0, 2, 1).max(-1)
     return QT, hard_label, seed,point
+
+
+def soft_slic_knn(point, seed, n_iter=10, k_facets=4):
+    """soft with knn implemented by pytorch
+
+    Args:
+        point (Tensor): import feature
+        seed (Tensor): facet center
+        n_iter (int, optional): number of ssn iter. Defaults to 10.
+        k_facets (int, optional): number of nearst facets knn chosed. Defaults to 4.
+    """
+    def soft_slic_all_single(point, seed):
+        dist_matrix = point.new(
+            point.shape[0], seed.shape[-1], point.shape[-1]).zero_()
+        for i in range(seed.shape[-1]):
+            initials = seed[:, :,
+                            i].unsqueeze(-1).repeat(1, 1, point.shape[-1])
+            dist_matrix[:, i, :] = -(pairwise_distance(point,
+                                                       initials)*pairwise_distance(point, initials))
+        QT = dist_matrix.softmax(1)
+        _, hard_label = QT.permute(0, 2, 1).max(-1)
+        return hard_label
+
+    B, C, N = point.shape
+    #select knn functions
+    if point.device == 'cpu':
+        knn = knn_indices_func_cpu
+    else:
+        knn = knn_indices_func_gpu
+
+    #calculate initial superpixels
+    # traditional k-means based
+    hard_label = soft_slic_all_single(point, seed)
+
+    for _ in range(n_iter):
+        #time_ = time()
+        dist_matrix = point.new(
+            point.shape[0], seed.shape[-1], point.shape[-1]).zero_()
+        NearstFacetsIdx = knn(seed.permute(0, 2, 1),
+                              seed.permute(0, 2, 1), k_facets, 1)
+        #batchwise operation->fvck
+        for batch_idx in range(B):
+            for seed_i in range(seed.shape[-1]):
+                mask = hard_label[batch_idx] == seed_i
+                for _, nearst in enumerate(NearstFacetsIdx[batch_idx, seed_i]):
+                    mask |= hard_label[batch_idx] == nearst
+                pointt = point[batch_idx, :, mask].permute(1, 0)
+                seeed = seed[batch_idx, :, seed_i].unsqueeze(
+                    0).repeat(pointt.shape[0], 1)
+                dist = pairwise_distance(pointt, seeed)
+                Q_part = (-dist.pow(2)).softmax(-1)
+                dist_matrix[batch_idx, seed_i, mask] = Q_part
+        seed = (torch.bmm(dist_matrix, point.permute(0, 2, 1)) /
+                dist_matrix.sum(2, keepdim=True)).permute(0, 2, 1)
+        #print("{}s".format(time()-time_))
+    _, hard_label = dist_matrix.permute(0, 2, 1).max(-1)
+
+    return dist_matrix, hard_label, seed, point
