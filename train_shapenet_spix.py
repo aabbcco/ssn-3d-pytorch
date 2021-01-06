@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 
 from lib.utils.meter import Meter
-from model_ptnet import PointNet_SSN
+from model_ptnet import PointNet_SSKNN
 from lib.dataset.shapenet import shapenet_spix
 from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse, uniform_compact_loss
 
@@ -53,7 +53,7 @@ def eval(model, loader, pos_scale, device):
 
 
 def update_param(data, model, optimizer, compactness,  pos_scale, spix_weig, device):
-    inputs, labels, spix = data
+    inputs, labels, spix,_ = data
 
     inputs = inputs.to(device)
     labels = labels.to(device)
@@ -84,7 +84,7 @@ def train(cfg):
     else:
         device = "cpu"
 
-    model = PointNet_SSN(cfg.fdim, cfg.nspix, cfg.niter).to(device)
+    model = PointNet_SSKNN(cfg.fdim, cfg.nspix, cfg.niter).to(device)
 
     optimizer = optim.Adam(model.parameters(), cfg.lr)
 
@@ -99,7 +99,7 @@ def train(cfg):
 
     iterations = 0
     # max_val_asa = 0
-    writer = SummaryWriter(log_dir='log', comment='traininglog')
+    writer = SummaryWriter(log_dir=cfg.out_dir, comment='traininglog')
     while iterations < cfg.train_iter:
         for data in train_loader:
             iterations += 1
@@ -139,7 +139,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--root", type=str,
-                        default='../shapenet_part_seg_hdf5_data', help="/ path/to/shapenet")
+                        default="../shapenet_partseg_spix", help="/ path/to/shapenet")
     parser.add_argument("--out_dir", default="./log",
                         type=str, help="/path/to/output directory")
     parser.add_argument("--batchsize", default=20, type=int)
