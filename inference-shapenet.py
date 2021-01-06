@@ -8,7 +8,7 @@ from lib.dataset.shapenet import shapenet, shapenet_spix
 from lib.utils.pointcloud_io import write
 from torch.utils.data import DataLoader
 from lib.ssn.ssn import soft_slic_all
-from model_ptnet import PointNet_SSN
+from model_ptnet import PointNet_SSN,PointNet_SSKNN
 
 
 @torch.no_grad()
@@ -58,24 +58,24 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     data = shapenet("../shapenet_part_seg_hdf5_data",
-                    split='val', onehot=False)
+                    split='val')
     loader = DataLoader(data, batch_size=1, shuffle=False)
-    model = PointNet_SSN(args.fdim, args.nspix, args.n_iter).to("cuda")
+    model = PointNet_SSKNN(args.fdim, args.nspix, args.niter).to("cuda")
     model.load_state_dict(torch.load(args.weight))
     model.eval()
     print(model)
 
     s = time.time()
 
-    for i, (pointcloud, label, spix, spixx) in enumerate(loader):
-        _, labels, _, _ = inference(pointcloud, model)
+    for i, (pointcloud, label,labell) in enumerate(loader):
+        _, labels, _, _ = inference(pointcloud,10,model)
 
         pointcloud = pointcloud.squeeze(0).transpose(1, 0).numpy()
-        label = label.squeeze(0).transpose(1, 0).numpy()
-        spix = spix.squeeze(0).transpose(1,  0).numpy()
+        label = labell.transpose(1, 0).numpy()
+        #spix = spix.squeeze(0).transpose(1,  0).numpy()
         ptcloud = np.concatenate(
-            (pointcloud, label, spix, labels.transpose(1, 0)),  axis=-1)
-        write.tobcd(ptcloud,  'xyzrgb', '{}.pcd'.format(i))
+            (pointcloud, label, label, labels.transpose(1, 0)),  axis=-1)
+        write.tobcd(ptcloud,  'xyzrgb', 'result-1000/{}.pcd'.format(i))
         # Q, label, center, feature = inference(pointcloud, args.nspix, args.niter,
         #                           args.fdim, args.pos_scale, args.weight)
         # print(f"time {time.time() - s}sec")
