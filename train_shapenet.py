@@ -70,8 +70,12 @@ def update_param(data, model, optimizer, compactness,  pos_scale, device):
     loss = recons_loss + compactness * compact_loss
 
     optimizer.zero_grad()  # clear previous grad
+    time1 = time.time()
     loss.backward()  # cal the grad
+    print("backward time:{}s".format(time.time()-time1))
+    time1 = time.time()
     optimizer.step()  # backprop
+    print("optmize time:{}s".format(time.time()-time1))
 
     return {"loss": loss.item(), "reconstruction": recons_loss.item(), "compact": compact_loss.item()}
 
