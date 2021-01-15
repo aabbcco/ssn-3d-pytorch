@@ -144,4 +144,4 @@ class PointNet_SSKNN(nn.Module):
         net = self.convs4(net)
         #net = net.transpose(2, 1).contiguous()
 
-        return soft_slic_knn(net, net[:, :, :self.nspix], self.n_iter)
+        return soft_slic_knn(net, net[:, :, :self.nspix], self.n_iter,k_facets=8)
