@@ -45,17 +45,20 @@ if __name__ == "__main__":
     import argparse
     import matplotlib.pyplot as plt
     parser = argparse.ArgumentParser()
-    # parser.add_argument("--image", type=str, help="/path/to/image")
-    parser.add_argument("--weight", default='log/model-shapenet.pth',
+    parser.add_argument("--weight","-w", default='log/model-shapenet.pth',
                         type=str, help="/path/to/pretrained_weight")
-    parser.add_argument("--fdim", default=10, type=int,
+    parser.add_argument("--fdim","-d", default=10, type=int,
                         help="embedding dimension")
-    parser.add_argument("--niter", default=10, type=int,
+    parser.add_argument("--niter","-n", default=10, type=int,
                         help="number of iterations for differentiable SLIC")
-    parser.add_argument("--nspix", default=100, type=int,
+    parser.add_argument("--nspix", default=50, type=int,
                         help="number of superpixels")
-    parser.add_argument("--pos_scale", default=10, type=float)
+    parser.add_argument("--pos_scale","-p", default=10, type=float)
+    parser.add_argument("--folder","-f",default='log',help="a folder to store result")
     args = parser.parse_args()
+
+    if not os.path.exists(args.folder):
+        os.mkdir(args.folder)
 
     data = shapenet("../shapenet_part_seg_hdf5_data",
                     split='val')
@@ -68,6 +71,7 @@ if __name__ == "__main__":
     s = time.time()
 
     for i, (pointcloud, label,labell) in enumerate(loader):
+        print(i)
         _, labels, _, _ = inference(pointcloud,10,model)
 
         pointcloud = pointcloud.squeeze(0).transpose(1, 0).numpy()
@@ -75,7 +79,7 @@ if __name__ == "__main__":
         #spix = spix.squeeze(0).transpose(1,  0).numpy()
         ptcloud = np.concatenate(
             (pointcloud, label, label, labels.transpose(1, 0)),  axis=-1)
-        write.tobcd(ptcloud,  'xyzrgb', 'result-1000/{}.pcd'.format(i))
+        write.tobcd(ptcloud,  'xyzrgb', os.path.join(args.folder,'{}.pcd'.format(i)))
         # Q, label, center, feature = inference(pointcloud, args.nspix, args.niter,
         #                           args.fdim, args.pos_scale, args.weight)
         # print(f"time {time.time() - s}sec")

@@ -70,6 +70,7 @@ def knn_indices_func_gpu(rep_pts: cuda.FloatTensor,  # (N, pts, dim)->(N,dim,pts
         dist2 = torch.sum((mqry - mref)**2, 2).squeeze()
         _, inds = torch.topk(dist2, k*d + 1, dim=1, largest=False)
         region_idx.append(inds[:, 1::d])
+        print(inds[:,1::d].shape)
 
     region_idx = torch.stack(region_idx, dim=0)
     #print("using gpu,time:{}s".format(time()-time1))
