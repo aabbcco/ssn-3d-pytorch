@@ -45,9 +45,9 @@ def knn_indices_func_cpu(rep_pts: FloatTensor,  # (N, pts, dim)
 
 
 def knn_indices_func_gpu(seed: cuda.FloatTensor,  # (B,C,npoint)
-                         pts: cuda.FloatTensor,  # (B,C,N)
-                         k: int
-                         ) -> cuda.LongTensor:  # (N,npoint,K)
+                           pts: cuda.FloatTensor,  # (B,C,N)
+                           k: int
+                           ) -> cuda.LongTensor:  # (N,npoint,K)
     """knn indices func reimplemented
 
     Args:
@@ -59,9 +59,11 @@ def knn_indices_func_gpu(seed: cuda.FloatTensor,  # (B,C,npoint)
     """    
     _, _, N = seed.shape
     _, _, M = pts.shape
-    mseed = seed.unsqueeze(-2).expand(-1, -1, M, -1)
-    mpts = pts.unsqueeze(-1).expand(-1, -1, -1, N)
+    mseed = seed.unsqueeze(-1).expand(-1, -1, -1, M)
+    mpts = pts.unsqueeze(-2).expand(-1, -1, N, -1)
     mdist = torch.sum((mpts-mseed)**2, dim=1)
+    # print("mseed:", mseed.shape, "\nmpts:",
+    #       mpts.shape, "\nmdist:", mdist.shape)
     _, idx = torch.topk(mdist, k=k+1, largest=False)
 
     return idx[:, :, 1:]

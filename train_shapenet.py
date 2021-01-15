@@ -70,8 +70,12 @@ def update_param(data, model, optimizer, compactness,  pos_scale, device):
     loss = recons_loss + compactness * compact_loss
 
     optimizer.zero_grad()  # clear previous grad
+    time1 = time.time()
     loss.backward()  # cal the grad
+    print("backward time:{}s".format(time.time()-time1))
+    time1 = time.time()
     optimizer.step()  # backprop
+    print("optmize time:{}s".format(time.time()-time1))
 
     return {"loss": loss.item(), "reconstruction": recons_loss.item(), "compact": compact_loss.item()}
 
@@ -145,7 +149,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_iter", default=10000, type=int)
     parser.add_argument("--fdim", default=10, type=int,
                         help="embedding dimension")
-    parser.add_argument("--niter", default=5, type=int,
+    parser.add_argument("--niter", default=4, type=int,
                         help="number of iterations for differentiable SLIC")
     parser.add_argument("--nspix", default=100, type=int,
                         help="number of superpixels")
