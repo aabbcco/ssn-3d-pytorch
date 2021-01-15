@@ -101,7 +101,7 @@ def train(cfg):
 
     iterations = 0
     max_val_asa = 0
-    writer = SummaryWriter(log_dir='log', comment='traininglog')
+    writer = SummaryWriter(log_dir=cfg.out_dir, comment='traininglog')
     while iterations < cfg.train_iter:
         for data in train_loader:
             iterations += 1
@@ -146,7 +146,7 @@ if __name__ == "__main__":
     parser.add_argument("--nworkers", default=8, type=int,
                         help="number of threads for CPU parallel")
     parser.add_argument("--lr", default=1e-6, type=float, help="learning rate")
-    parser.add_argument("--train_iter", default=10000, type=int)
+    parser.add_argument("--train_iter", default=7000, type=int)
     parser.add_argument("--fdim", default=10, type=int,
                         help="embedding dimension")
     parser.add_argument("--niter", default=4, type=int,
