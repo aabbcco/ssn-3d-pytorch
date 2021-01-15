@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from lib.ssn.ssn import soft_slic_all
+from lib.ssn.ssn import soft_slic_all, soft_slic_knn
 from lib.MEFEAM.MEFEAM import MFEM, LFAM, discriminative_loss
 
 

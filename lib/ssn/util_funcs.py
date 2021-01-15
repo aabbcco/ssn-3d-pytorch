@@ -16,7 +16,7 @@ ULongTensor = Union[LongTensor, cuda.LongTensor]
 
 def knn_indices_func_cpu(rep_pts: FloatTensor,  # (N, pts, dim)
                          pts: FloatTensor,      # (N, x, dim)
-                         K: int, D: int
+                         K: int, D=1
                          ) -> LongTensor:         # (N, pts, K)
     """
     CPU-based Indexing function based on K-Nearest Neighbors search.
@@ -44,33 +44,24 @@ def knn_indices_func_cpu(rep_pts: FloatTensor,  # (N, pts, dim)
     return region_idx
 
 
-def knn_indices_func_gpu(rep_pts: cuda.FloatTensor,  # (N, pts, dim)->(N,dim,pts)
-                         pts: cuda.FloatTensor,      # (N, x, dim)->(N,dim,x)
-                         k: int, d: int
-                         ) -> cuda.LongTensor:         # (N, pts, K)
-    """
-    GPU-based Indexing function based on K-Nearest Neighbors search.
-    Very memory intensive, and thus unoptimal for large numbers of points.
-    :param rep_pts: Representative points.
-    :param pts: Point cloud to get indices from.
-    :param K: Number of nearest neighbors to collect.
-    :param D: "Spread" of neighboring points.
-    :return: Array of indices, P_idx, into pts such that pts[n][P_idx[n],:]
-    is the set k-nearest neighbors for the representative points in pts[n].
-    """
-    #time1 = time()
-    region_idx = []
+def knn_indices_func_gpu(seed: cuda.FloatTensor,  # (B,C,npoint)
+                         pts: cuda.FloatTensor,  # (B,C,N)
+                         k: int
+                         ) -> cuda.LongTensor:  # (N,npoint,K)
+    """knn indices func reimplemented
 
-    for n, qry in enumerate(rep_pts):
-        ref = pts[n]
-        n, d = ref.size()
-        m, d = qry.size()
-        mref = ref.expand(m, n, d)
-        mqry = qry.expand(n, m, d).transpose(0, 1)
-        dist2 = torch.sum((mqry - mref)**2, 2).squeeze()
-        _, inds = torch.topk(dist2, k*d + 1, dim=1, largest=False)
-        region_idx.append(inds[:, 1::d])
+    Args:
+        seed    (cuda.FloatTensor)  : clusting seed->(B,C,npoint)
+        pts     (cuda.FloatTensor)  : pointcloud using clusting method->(B,C,N) 
+        l       (int)               : k neibor in knn 
+    Returns:
+        cuda.LongTensor: knn idx(B,npoint,k)
+    """    
+    _, _, N = seed.shape
+    _, _, M = pts.shape
+    mseed = seed.unsqueeze(-2).expand(-1, -1, M, -1)
+    mpts = pts.unsqueeze(-1).expand(-1, -1, -1, N)
+    mdist = torch.sum((mpts-mseed)**2, dim=1)
+    _, idx = torch.topk(mdist, k=k+1, largest=False)
 
-    region_idx = torch.stack(region_idx, dim=0)
-    #print("using gpu,time:{}s".format(time()-time1))
-    return region_idx
+    return idx[:, :, 1:]

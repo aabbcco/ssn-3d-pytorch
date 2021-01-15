@@ -4,6 +4,12 @@ from torch import softmax
 from torch.nn.functional import pairwise_distance
 from .util_funcs import knn_indices_func_cpu, knn_indices_func_gpu
 
+
+#for time count->>SSN python toooooooooo slow
+from time import time
+SoftSlicTime = {}
+
+
 # from .pair_wise_distance import PairwiseDistFunction
 # from ..utils.sparse_utils import naive_sparse_bmm
 
@@ -140,7 +146,7 @@ def soft_slic_all(point, seed,   n_iter=10):
     return QT, hard_label, seed,point
 
 
-def soft_slic_knn(point, seed, n_iter=10, k_facets=4):
+def soft_slic_knn(point, seed, n_iter=10, k_facets=8):
     """soft with knn implemented by pytorch
 
     Args:
@@ -170,16 +176,19 @@ def soft_slic_knn(point, seed, n_iter=10, k_facets=4):
 
     #calculate initial superpixels
     # traditional k-means based
+    #print("knn slic start")
+    time1 = time()
     hard_label = soft_slic_all_single(point, seed)
-
-    for _ in range(n_iter):
+    SoftSlicTime["single"] = time()-time1
+    for iter in range(n_iter):
+        time_iter = time()
         #time_ = time()
         dist_matrix = point.new(
             point.shape[0], seed.shape[-1], point.shape[-1]).zero_()
-        NearstFacetsIdx = knn(seed.permute(0, 2, 1),
-                              seed.permute(0, 2, 1), k_facets, 1)
+        NearstFacetsIdx = knn(seed, seed, k_facets)
         #batchwise operation->fvck
         for batch_idx in range(B):
+            time_batch = time()
             for seed_i in range(seed.shape[-1]):
                 mask = hard_label[batch_idx] == seed_i
                 for _, nearst in enumerate(NearstFacetsIdx[batch_idx, seed_i]):
@@ -190,9 +199,11 @@ def soft_slic_knn(point, seed, n_iter=10, k_facets=4):
                 dist = pairwise_distance(pointt, seeed)
                 Q_part = (-dist.pow(2)).softmax(-1)
                 dist_matrix[batch_idx, seed_i, mask] = Q_part
+            SoftSlicTime["time_batch_{}".format(
+                batch_idx)] = time() - time_batch
         seed = (torch.bmm(dist_matrix, point.permute(0, 2, 1)) /
                 dist_matrix.sum(2, keepdim=True)).permute(0, 2, 1)
-        #print("{}s".format(time()-time_))
+        SoftSlicTime["time_iter_{}".format(iter)] = time()-time_iter
     _, hard_label = dist_matrix.permute(0, 2, 1).max(-1)
-
+    SoftSlicTime["total"] = time()-time1
     return dist_matrix, hard_label, seed, point
