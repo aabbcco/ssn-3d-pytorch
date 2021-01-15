@@ -50,18 +50,6 @@ def knn_indices_func_gpu(seed: cuda.FloatTensor,  # (B,C,npoint)
                          ) -> cuda.LongTensor:  # (N,npoint,K)
     """knn indices func reimplemented
 
-<<<<<<< HEAD
-    for n, qry in enumerate(rep_pts):
-        ref = pts[n]
-        n, d = ref.size()
-        m, d = qry.size()
-        mref = ref.expand(m, n, d)
-        mqry = qry.expand(n, m, d).transpose(0, 1)
-        dist2 = torch.sum((mqry - mref)**2, 2).squeeze()
-        _, inds = torch.topk(dist2, k*d + 1, dim=1, largest=False)
-        region_idx.append(inds[:, 1::d])
-        print(inds[:,1::d].shape)
-=======
     Args:
         seed    (cuda.FloatTensor)  : clusting seed->(B,C,npoint)
         pts     (cuda.FloatTensor)  : pointcloud using clusting method->(B,C,N) 
@@ -75,6 +63,5 @@ def knn_indices_func_gpu(seed: cuda.FloatTensor,  # (B,C,npoint)
     mpts = pts.unsqueeze(-1).expand(-1, -1, -1, N)
     mdist = torch.sum((mpts-mseed)**2, dim=1)
     _, idx = torch.topk(mdist, k=k+1, largest=False)
->>>>>>> 45cd06e41eba257ee1062b4745986fcd546b7718
 
     return idx[:, :, 1:]
