@@ -147,7 +147,9 @@ def soft_slic_all(point, seed,   n_iter=10):
 
 
 def soft_slic_knn(point, seed, n_iter=10, k_facets=8):
-    """soft with knn implemented by pytorch
+    """
+    soft slic with knn implemented by pytorch
+    catch k adjacent spixs around selected center
 
     Args:
         point (Tensor): import feature
@@ -207,3 +209,45 @@ def soft_slic_knn(point, seed, n_iter=10, k_facets=8):
     _, hard_label = dist_matrix.permute(0, 2, 1).max(-1)
     SoftSlicTime["total"] = time()-time1
     return dist_matrix, hard_label, seed, point
+
+
+
+def soft_slic_pknn(point, seed, n_iter=10, k_facets=256):
+    """
+
+    soft slic implemented using knn
+    catch k adjacent pix around center
+
+    Args:
+        point (Tensor): point feature
+        seed (Tensor): original spix center
+        n_iter (int, optional): n slic iters . Defaults to 10.
+        k_facets (int, optional): k nearst points. Defaults to 256.
+
+    Returns:
+        [type]: [description]
+    """    
+    B, C, N = point.shape
+    #select knn functions
+    if point.device == 'cpu':
+        knn = knn_indices_func_cpu
+    else:
+        knn = knn_indices_func_gpu
+    for _ in range(n_iter):
+        dist_matrix = point.new(
+            B, seed.shape[-1], point.shape[-1]).zero_()
+        NearstFacetsIdx = knn(seed,point,k_point)
+        # pointt = torch.stack([torch.stack([x[:, idxxx] for idxxx in idxx], dim=1) for idxx, x in zip(NearstFacetsIdx, point)])
+        pointt = torch.stack([x[:,idxx] for idxx,x in zip(NearstFacetsIdx, point)])
+        # print(pointt.shape)
+        packed_seed = seed.unsqueeze(-1).expand([-1,-1,-1,k_point])
+        dist =pairwise_distance(packed_seed,pointt)
+        # print(dist.shape)
+        QT_part = softmax(-dist.pow(2))
+        for i in range(dist_matrix.shape[0]):
+            for j in range(dist_matrix.shape[1]):
+                dist_matrix[i,j,NearstFacetsIdx[i,j]]=QT_part[i,j]
+        seed = (torch.bmm(dist_matrix, point.permute(0, 2, 1))/(dist_matrix.sum(2, keepdim=True)+1e-16)).permute(0, 2, 1)
+    _, hard_label = dist_matrix.permute(0, 2, 1).max(-1)
+
+    return dist_matrix, hard_label, seed,point

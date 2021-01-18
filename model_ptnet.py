@@ -7,11 +7,23 @@ import torch.nn.functional as F
 
 
 class PointNet_SSN(nn.Module):
-    def __init__(self, feature_dim, nspix, n_iter=10, RGB=False, normal=False):
+    def __init__(self, feature_dim, nspix, n_iter=10, RGB=False, normal=False,backend=soft_slic_knn):
+        """
+        Spix Network Using pointnet as frontend
+
+        Args:
+            feature_dim (int): dim of output feature
+            nspix (int): getwork generate n spixs
+            n_iter (int, optional): n soft silc iters. Defaults to 10.
+            RGB (bool, optional): if the rgb feature is used. Defaults to False.
+            normal (bool, optional): if the normal feature is used. Defaults to False.
+            backend (function, optional): a backend soft slic function. Defaults to soft_slic_knn.
+        """        
         super().__init__()
         self.nspix = nspix
         self.n_iter = n_iter
         self.channel = 3
+        self.backend = backend
         if RGB:
             self.channel += 3
 
@@ -144,4 +156,4 @@ class PointNet_SSKNN(nn.Module):
         net = self.convs4(net)
         #net = net.transpose(2, 1).contiguous()
 
-        return soft_slic_knn(net, net[:, :, :self.nspix], self.n_iter,k_facets=8)
+        return self.backend(net, net[:, :, :self.nspix], self.n_iter,k_facets=8)
