@@ -132,7 +132,19 @@ SoftSlicTime = {}
 #     return abs_affinity, hard_labels, spixel_features
 
 
-def soft_slic_all(point, seed,   n_iter=10):
+def soft_slic_all(point, seed,   n_iter=10,k_faces=8):
+    """
+    soft slic with all points entering computation
+
+    Args:
+        point (Tensor): import feature
+        seed (Tensor): facet center
+        n_iter (int, optional): number of ssn iter. Defaults to 10.
+        k_facets (int, optional): Dummy API,never mind
+
+    Returns:
+        [type]: [description]
+    """    
     for _ in range(n_iter):
         dist_matrix = point.new(
             point.shape[0], seed.shape[-1], point.shape[-1]).zero_()

@@ -83,11 +83,8 @@ class PointNet_SSN(nn.Module):
         net = F.relu(self.bns3(self.convs3(net)))
         net = self.convs4(net)
         #net = net.transpose(2, 1).contiguous()
-
-        if self.training:
-            return soft_slic_all(net, net[:, :, :self.nspix], self.n_iter)
-        else:
-            return soft_slic_all(net, net[:, :, :self.nspix], self.n_iter)
+        return self.backend(net, net[:, :, :self.nspix], self.n_iter,k_facets=8)
+    
 
 
 class PointNet_SSKNN(nn.Module):
@@ -156,4 +153,4 @@ class PointNet_SSKNN(nn.Module):
         net = self.convs4(net)
         #net = net.transpose(2, 1).contiguous()
 
-        return self.backend(net, net[:, :, :self.nspix], self.n_iter,k_facets=8)
+        return soft_slic_knn(net, net[:, :, :self.nspix], self.n_iter,k_facets=8)
