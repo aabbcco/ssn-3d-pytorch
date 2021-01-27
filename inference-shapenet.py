@@ -8,7 +8,8 @@ from lib.dataset.shapenet import shapenet, shapenet_spix
 from lib.utils.pointcloud_io import write
 from torch.utils.data import DataLoader
 from lib.ssn.ssn import soft_slic_all
-from model_ptnet import PointNet_SSN,PointNet_SSKNN
+from model_ptnet import PointNet_SSN
+from lib.ssn.ssn import soft_slic_pknn
 
 
 @torch.no_grad()
@@ -47,7 +48,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--weight","-w", default='log/model-shapenet.pth',
                         type=str, help="/path/to/pretrained_weight")
-    parser.add_argument("--fdim","-d", default=10, type=int,
+    parser.add_argument("--fdim","-d", default=16, type=int,
                         help="embedding dimension")
     parser.add_argument("--niter","-n", default=10, type=int,
                         help="number of iterations for differentiable SLIC")
@@ -63,7 +64,7 @@ if __name__ == "__main__":
     data = shapenet("../shapenet_part_seg_hdf5_data",
                     split='val')
     loader = DataLoader(data, batch_size=1, shuffle=False)
-    model = PointNet_SSKNN(args.fdim, args.nspix, args.niter).to("cuda")
+    model = PointNet_SSN(args.fdim, args.nspix, args.niter,backend=soft_slic_pknn).to("cuda")
     model.load_state_dict(torch.load(args.weight))
     model.eval()
     print(model)

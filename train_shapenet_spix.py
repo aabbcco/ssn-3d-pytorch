@@ -8,9 +8,10 @@ from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 
 from lib.utils.meter import Meter
-from model_ptnet import PointNet_SSKNN
+from model_ptnet import PointNet_SSN
 from lib.dataset.shapenet import shapenet_spix
 from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse, uniform_compact_loss
+from lib.ssn.ssn import soft_slic_pknn
 
 
 @torch.no_grad()
@@ -84,7 +85,7 @@ def train(cfg):
     else:
         device = "cpu"
 
-    model = PointNet_SSKNN(cfg.fdim, cfg.nspix, cfg.niter).to(device)
+    model = PointNet_SSN(cfg.fdim, cfg.nspix, cfg.niter,backend=soft_slic_pknn).to(device)
 
     optimizer = optim.Adam(model.parameters(), cfg.lr)
 
@@ -142,16 +143,16 @@ if __name__ == "__main__":
                         default="../shapenet_partseg_spix", help="/ path/to/shapenet")
     parser.add_argument("--out_dir", default="./log",
                         type=str, help="/path/to/output directory")
-    parser.add_argument("--batchsize", default=2, type=int)
+    parser.add_argument("--batchsize", default=16, type=int)
     parser.add_argument("--nworkers", default=8, type=int,
                         help="number of threads for CPU parallel")
     parser.add_argument("--lr", default=1e-6, type=float, help="learning rate")
     parser.add_argument("--train_iter", default=10000, type=int)
-    parser.add_argument("--fdim", default=10, type=int,
+    parser.add_argument("--fdim", default=16, type=int,
                         help="embedding dimension")
-    parser.add_argument("--niter", default=5, type=int,
+    parser.add_argument("--niter", default=10, type=int,
                         help="number of iterations for differentiable SLIC")
-    parser.add_argument("--nspix", default=50, type=int,
+    parser.add_argument("--nspix", default=100, type=int,
                         help="number of superpixels")
     parser.add_argument("--pos_scale", default=10, type=float)
     parser.add_argument("--compactness", default=1e-4, type=float)

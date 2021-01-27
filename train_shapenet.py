@@ -8,9 +8,10 @@ from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 
 from lib.utils.meter import Meter
-from model_ptnet import PointNet_SSN, PointNet_SSKNN
+from lib.ssn.ssn import soft_slic_pknn
+from model_ptnet import PointNet_SSN
 from lib.dataset import shapenet, augmentation
-from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse, uniform_compact_loss
+from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse
 
 
 @torch.no_grad()
@@ -70,14 +71,10 @@ def update_param(data, model, optimizer, compactness,  pos_scale, device):
     loss = recons_loss + compactness * compact_loss
 
     optimizer.zero_grad()  # clear previous grad
-    time1 = time.time()
     loss.backward()  # cal the grad
-    print("backward time:{}s".format(time.time()-time1))
-    time1 = time.time()
     optimizer.step()  # backprop
-    print("optmize time:{}s".format(time.time()-time1))
 
-    return {"loss": loss.item(), "reconstruction": recons_loss.item(), "compact": compact_loss.item()}
+    return {"loss": loss.item(), "reconstruction": recons_loss.item(), "compact": compact_loss.item(),"lr":optimizer.state_dict()['param_groups'][0]['lr']}
 
 
 def train(cfg):
@@ -86,7 +83,7 @@ def train(cfg):
     else:
         device = "cpu"
 
-    model = PointNet_SSKNN(cfg.fdim, cfg.nspix, cfg.niter).to(device)
+    model = PointNet_SSN(cfg.fdim, cfg.nspix, cfg.niter,backend=soft_slic_pknn).to(device)
 
     optimizer = optim.Adam(model.parameters(), cfg.lr)
 
@@ -116,7 +113,8 @@ def train(cfg):
                               metric["reconstruction"], iterations)
             writer.add_scalar("loss/compact_loss",
                               metric["compact"], iterations)
-            if (iterations % 1000) == 0:
+            writer.add_scalar("lr",metric["lr"],iterations)
+            if (iterations % 500) == 0:
                 torch.save(model.state_dict(), os.path.join(cfg.out_dir, "model_iter"+str(iterations)+".pth"))
             # if (iterations % cfg.test_interval) == 0:
             #     asa = eval(model, test_loader, cfg.pos_scale,  device)
@@ -142,12 +140,12 @@ if __name__ == "__main__":
                         default='../shapenet_part_seg_hdf5_data', help="/ path/to/shapenet")
     parser.add_argument("--out_dir", default="./log",
                         type=str, help="/path/to/output directory")
-    parser.add_argument("--batchsize", default=12, type=int)
+    parser.add_argument("--batchsize", default=20, type=int)
     parser.add_argument("--nworkers", default=8, type=int,
                         help="number of threads for CPU parallel")
-    parser.add_argument("--lr", default=1e-6, type=float, help="learning rate")
-    parser.add_argument("--train_iter", default=7000, type=int)
-    parser.add_argument("--fdim", default=10, type=int,
+    parser.add_argument("--lr", default=1e-4, type=float, help="learning rate")
+    parser.add_argument("--train_iter", default=10000, type=int)
+    parser.add_argument("--fdim", default=16, type=int,
                         help="embedding dimension")
     parser.add_argument("--niter", default=10, type=int,
                         help="number of iterations for differentiable SLIC")
