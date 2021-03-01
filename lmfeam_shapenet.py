@@ -143,7 +143,7 @@ def train(cfg):
     meter = Meter()
 
     iterations = 0
-    writer = SummaryWriter(log_dir='log', comment='traininglog')
+    writer = SummaryWriter(log_dir= cfg.out_dir, comment='traininglog')
     while iterations < cfg.train_iter:
         for data in train_loader:
             iterations += 1
