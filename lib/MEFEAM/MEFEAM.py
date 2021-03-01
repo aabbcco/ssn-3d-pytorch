@@ -119,7 +119,7 @@ def sample_and_group_knn(radius, nsample, xyz, points, use_xyz=False):
     else:
         knn = knn_indices_func_gpu
 
-    idx = knn(xyz, points, nsample, 1)
+    idx = knn(xyz, points, nsample)
     grouped_points = torch.stack(
         [torch.stack([x[:, idxxx] for idxxx in idxx], dim=1) for idxx, x in zip(idx, points)])
 

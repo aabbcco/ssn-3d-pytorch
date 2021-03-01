@@ -209,7 +209,7 @@ def soft_slic_knn(point, seed, n_iter=10, k_facets=8):
     return dist_matrix, hard_label, seed, point
 
 
-def soft_slic_pknn(point, seed, n_iter=10, k_point=256):
+def soft_slic_pknn(point, seed, n_iter=10, k_point=128):
     """
 
     soft slic implemented using knn
