@@ -97,8 +97,8 @@ def sample_and_group_query_ball(radius, nsample, xyz, points, use_xyz=False):
         [torch.stack([x[:, idxxx] for idxxx in idxx], dim=1) for idxx, x in zip(idx, points)])
 
     if use_xyz:
-        grouped_xyz = xyz.unsquezze(2).repeat(1, 1, nsample, 1)
-        return torch.cat([grouped_xyz, grouped_points], -1)
+        grouped_xyz = xyz.unsqueeze(2).repeat(1, 1, nsample, 1)
+        return torch.cat([grouped_xyz.permute(0, 1, 3, 2), grouped_points], -1)
     else:
         return grouped_points
 
@@ -119,7 +119,7 @@ def sample_and_group_knn(radius, nsample, xyz, points, use_xyz=False):
     else:
         knn = knn_indices_func_gpu
 
-    idx = knn(xyz, points, nsample, 1)
+    idx = knn(xyz, points, nsample)
     grouped_points = torch.stack(
         [torch.stack([x[:, idxxx] for idxxx in idxx], dim=1) for idxx, x in zip(idx, points)])
 
@@ -430,9 +430,11 @@ class discriminative_loss(nn.Module):
         l_reg = 0
         for batch in range(prediction.shape[0]):
             unique = torch.unique(label[batch])
-            center = torch.stack([torch.mean(prediction[batch, :, label[batch]
-
-                                                        == unique_label], dim=-1, keepdim=True)for unique_label in unique])
+            center = torch.stack([
+                torch.mean(prediction[batch, :, label[batch] == unique_label],
+                           dim=-1,
+                           keepdim=True) for unique_label in unique
+            ])
             l_reg += torch.sum(torch.norm(center, dim=0)) / unique.shape[0]
 
         var = self.var(prediction, label)
