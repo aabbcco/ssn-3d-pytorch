@@ -11,9 +11,9 @@ from tensorboardX import SummaryWriter
 from lib.utils.meter import Meter
 from lib.dataset import shapenet, augmentation
 from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse, uniform_compact_loss
-from lib.MEFEAM.MEFEAM import discriminative_loss, LMFEAM
+from lib.MEFEAM.MEFEAM import discriminative_loss, LMFEAM, sample_and_group_query_ball
 
-from lib.ssn.ssn import soft_slic_all
+from lib.ssn.ssn import soft_slic_all, soft_slic_pknn
 
 
 class LMFEAM_SSN(Module):
@@ -39,7 +39,8 @@ class LMFEAM_SSN(Module):
                              [128, 64, feature_dim],
                              32,
                              self.channel,
-                             point_scale=[0.2, 0.4, 0.6])
+                             point_scale=[0.2, 0.4, 0.6],
+                             grouping=sample_and_group_query_ball)
 
     def forward(self, x):
         feature, msf = self.lmfeam(x)
@@ -100,7 +101,7 @@ def update_param(data, model, optimizer, compactness, pos_scale, device,
 
     recons_loss = reconstruct_loss_with_cross_etnropy(Q, labels)
     compact_loss = reconstruct_loss_with_mse(Q, inputs, H)
-    disc = disc_loss(msf_feature, H)
+    disc = disc_loss(msf_feature, labels_num)
 
     #uniform_compactness = uniform_compact_loss(Q,coords.reshape(*coords.shape[:2], -1), H,device=device)
 
@@ -124,7 +125,7 @@ def train(cfg):
     else:
         device = "cpu"
 
-    model = LMFEAM_SSN(10, 50).to(device)  # LMFEAM(10, 50).to(device)
+    model = LMFEAM_SSN(10, 50, backend=soft_slic_pknn).to(device)
 
     disc_loss = discriminative_loss(0.1, 0.1)
 
@@ -144,13 +145,16 @@ def train(cfg):
 
     iterations = 0
     writer = SummaryWriter(log_dir= cfg.out_dir, comment='traininglog')
-    while iterations < cfg.train_iter:
+    for epoch_idx in range(cfg.train_epoch):
+        batch_iterations = 0
         for data in train_loader:
             iterations += 1
+            batch_iterations+=1
             metric = update_param(data, model, optimizer, cfg.compactness,
                                   cfg.pos_scale, device, disc_loss)
             meter.add(metric)
-            state = meter.state(f"[{iterations}/{cfg.train_iter}]")
+            state = meter.state(
+                f"[{batch_iterations},{epoch_idx}/{cfg.train_epoch}]")
             print(state)
             # return {"loss": loss.item(), "reconstruction": recons_loss.item(), "compact": compact_loss.item()}
             writer.add_scalar("comprehensive/loss", metric["loss"], iterations)
@@ -159,13 +163,13 @@ def train(cfg):
             writer.add_scalar("loss/compact_loss", metric["compact"],
                               iterations)
             writer.add_scalar("loss/disc_loss", metric["disc"], iterations)
-            if (iterations % 1000) == 0:
+            if (iterations % 500) == 0:
                 torch.save(
                     model.state_dict(),
-                    os.path.join(cfg.out_dir,
-                                 "model_iter" + str(iterations) + ".pth"))
-            if iterations == cfg.train_iter:
-                break
+                    os.path.join(
+                        cfg.out_dir, "model_epoch_" + str(epoch_idx) + "_" +
+                        str(batch_iterations) + '_iter_' + str(iterations) +
+                        ".pth"))
 
     unique_id = str(int(time.time()))
     torch.save(model.state_dict(),
@@ -190,7 +194,7 @@ if __name__ == "__main__":
                         type=int,
                         help="number of threads for CPU parallel")
     parser.add_argument("--lr", default=1e-6, type=float, help="learning rate")
-    parser.add_argument("--train_iter", default=10000, type=int)
+    parser.add_argument("--train_epoch", default=30, type=int)
     parser.add_argument("--fdim",
                         default=10,
                         type=int,

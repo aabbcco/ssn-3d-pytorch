@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import torch
+import torch.nn as nn
 import os
 
 from skimage.color import rgb2lab
@@ -8,8 +9,39 @@ from lib.dataset.shapenet import shapenet, shapenet_spix
 from lib.utils.pointcloud_io import write
 from torch.utils.data import DataLoader
 from lib.ssn.ssn import soft_slic_all
-from model_MNFEAM import MFEAM_SSN
+from lib.MEFEAM.MEFEAM import LMFEAM
 from lib.ssn.ssn import soft_slic_pknn
+
+
+class LMFEAM_SSN(nn.Module):
+    def __init__(self,
+                 feature_dim,
+                 nspix,
+                 mfem_dim=6,
+                 n_iter=10,
+                 RGB=False,
+                 normal=False,
+                 backend=soft_slic_all):
+        super().__init__()
+        self.nspix = nspix
+        self.n_iter = n_iter
+        self.channel = 3
+        self.backend = backend
+        if RGB:
+            self.channel += 3
+        if normal:
+            self.channel += 3
+        #[32, 64], [128, 128], [64, mfem_dim], 32,3 , [0.2, 0.4, 0.6]
+        self.lmfeam = LMFEAM([32, 64], [128, 128], [64, mfem_dim],
+                             [128, 64, feature_dim],
+                             32,
+                             self.channel,
+                             point_scale=[0.2, 0.4, 0.6])
+
+    def forward(self, x):
+        feature, msf = self.lmfeam(x)
+        return self.backend(feature, feature[:, :, :self.nspix],
+                            self.n_iter), msf
 
 
 @torch.no_grad()
@@ -46,19 +78,20 @@ if __name__ == "__main__":
     import argparse
     import matplotlib.pyplot as plt
     parser = argparse.ArgumentParser()
-    parser.add_argument("--weight",
-                        "-w",
-                        default='log/model-shapenet.pth',
-                        type=str,
-                        help="/path/to/pretrained_weight")
+    parser.add_argument(
+        "--weight",
+        "-w",
+        default="log_lmnfeam_pknn-spix/model_epoch_17_614_iter_13500.pth",
+        type=str,
+        help="/path/to/pretrained_weight") 
     parser.add_argument("--fdim",
                         "-d",
-                        default=16,
+                        default=10,
                         type=int,
                         help="embedding dimension")
     parser.add_argument("--niter",
                         "-n",
-                        default=10,
+                        default=5,
                         type=int,
                         help="number of iterations for differentiable SLIC")
     parser.add_argument("--nspix",
@@ -77,7 +110,7 @@ if __name__ == "__main__":
 
     data = shapenet("../shapenet_part_seg_hdf5_data", split='val')
     loader = DataLoader(data, batch_size=1, shuffle=False)
-    model = MFEAM_SSN(10, 50, backend=soft_slic_pknn).to("cuda")
+    model = LMFEAM_SSN(10, 50, backend=soft_slic_pknn).to("cuda")
     model.load_state_dict(torch.load(args.weight))
     model.eval()
     print(model)

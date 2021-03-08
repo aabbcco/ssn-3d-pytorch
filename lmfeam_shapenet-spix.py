@@ -13,7 +13,7 @@ from lib.dataset import shapenet, augmentation
 from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse, uniform_compact_loss
 from lib.MEFEAM.MEFEAM import discriminative_loss, LMFEAM
 
-from lib.ssn.ssn import soft_slic_all
+from lib.ssn.ssn import soft_slic_pknn, soft_slic_all
 
 
 class LMFEAM_SSN(Module):
@@ -35,7 +35,7 @@ class LMFEAM_SSN(Module):
         if normal:
             self.channel += 3
         #[32, 64], [128, 128], [64, mfem_dim], 32,3 , [0.2, 0.4, 0.6]
-        self.lmfeam = LMFEAM([32, 64], [128, 128], [64, mfem_dim],
+        self.lmfeam = LMFEAM([32, 64], [64, 128], [64, mfem_dim],
                              [128, 64, feature_dim],
                              32,
                              self.channel,
@@ -102,7 +102,7 @@ def update_param(data, model, optimizer, compactness, pos_scale, device,
     recons_loss = reconstruct_loss_with_cross_etnropy(Q, labels)
     spix_loss = reconstruct_loss_with_cross_etnropy(Q, spix)
     compact_loss = reconstruct_loss_with_mse(Q, inputs, H)
-    disc = disc_loss(msf_feature, H)
+    disc = disc_loss(msf_feature, spix_num)
 
     #uniform_compactness = uniform_compact_loss(Q,coords.reshape(*coords.shape[:2], -1), H,device=device)
 
@@ -127,7 +127,8 @@ def train(cfg):
     else:
         device = "cpu"
 
-    model = LMFEAM_SSN(10, 50).to(device)  # LMFEAM(10, 50).to(device)
+    model = LMFEAM_SSN(10, 50, backend=soft_slic_pknn).to(
+        device)  # LMFEAM(10, 50).to(device)
 
     disc_loss = discriminative_loss(0.1, 0.1)
 
@@ -139,6 +140,7 @@ def train(cfg):
                               shuffle=True,
                               drop_last=True,
                               num_workers=cfg.nworkers)
+    print(train_dataset.__len__())
 
     # test_dataset = shapenet.shapenet(cfg.root, split="test")
     # test_loader = DataLoader(test_dataset, 1, shuffle=False, drop_last=False)
@@ -160,7 +162,7 @@ def train(cfg):
             print(state)
             # return {"loss": loss.item(), "reconstruction": recons_loss.item(), "compact": compact_loss.item()}
             writer.add_scalar("comprehensive/loss", metric["loss"], iterations)
-            writer.add_scalar("loss/disc_loss", metric["spix"], iterations)
+            writer.add_scalar("loss/spix_loss", metric["spix"], iterations)
             writer.add_scalar("loss/reconstruction_loss",
                               metric["reconstruction"], iterations)
             writer.add_scalar("loss/compact_loss", metric["compact"],
