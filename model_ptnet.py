@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 
 class PointNet_SSN(nn.Module):
-    def __init__(self, feature_dim, nspix, n_iter=10, RGB=False, normal=False,backend=soft_slic_knn):
+    def __init__(self, feature_dim, nspix, n_iter=10, RGB=False, normal=False, backend=soft_slic_knn):
         """
         Spix Network Using pointnet as frontend
 
@@ -18,7 +18,7 @@ class PointNet_SSN(nn.Module):
             RGB (bool, optional): if the rgb feature is used. Defaults to False.
             normal (bool, optional): if the normal feature is used. Defaults to False.
             backend (function, optional): a backend soft slic function. Defaults to soft_slic_knn.
-        """        
+        """
         super().__init__()
         self.nspix = nspix
         self.n_iter = n_iter
@@ -84,8 +84,8 @@ class PointNet_SSN(nn.Module):
         net = self.convs4(net)
         #net = net.transpose(2, 1).contiguous()
         return self.backend(net, net[:, :, :self.nspix], self.n_iter)
-    
-#may delete after 2~3commits
+
+# may delete after 2~3commits
 
 # class PointNet_SSKNN(nn.Module):
 #     def __init__(self, feature_dim, nspix, n_iter=10, RGB=False, normal=False):
