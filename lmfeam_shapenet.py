@@ -57,22 +57,26 @@ def eval(model, loader, pos_scale, device):
     cnt = 0
     for data in loader:
         cnt += 1
-        inputs, labels = data  # b*c*npoint
+        inputs, labels, labels_num = data  # b*c*npoint
 
         inputs = inputs.to(device)  # b*c*w*h
-        labels = labels.to(device)  # sematic_lable
+        #labels = labels.to(device)  # sematic_lable
         inputs = pos_scale * inputs
         # calculation,return affinity,hard lable,feature tensor
-        Q, H, feat = model(inputs)
-
-        asa = CalAchievableSegAccSingle(H, labels)
-        usa = CalUnderSegErrSingle(H, labels)
-            H.to("cpu").detach().numpy(),
-            labels.to("cpu").numpy())  # return data to cpu
+        (Q, H, _, _), msf_feature = model(inputs)
+        H = H.squeeze(0).to("cpu").detach().numpy()
+        labels_num = labels_num.squeeze(0).numpy()
+        asa = CalAchievableSegAccSingle(H, labels_num)
+        usa = CalUnderSegErrSingle(H, labels_num)
         sum_asa += asa
-                if(100 = cnt): break
+        sum_usa += usa
+        if (100 == cnt): break
     model.train()
-                return sum_asa / 100.0, sum_usa/100.0  # cal asa
+    asaa = sum_asa / 100.0
+    usaa = sum_usa / 100.0
+    strs = "[test]:asa: {:.5f},ue: {:.5f}".format(asaa, usaa)
+    print(strs)
+    return asaa, usaa  # cal asa
 
 
 def update_param(data, model, optimizer, compactness, pos_scale, device,
@@ -125,10 +129,8 @@ def train(cfg):
                               drop_last=True,
                               num_workers=cfg.nworkers)
 
-                                  test_dataset=shapenet.shapenet(
-                              cfg.root, split = "test")
-                                  test_loader=DataLoader(
-                              test_dataset, 1, shuffle = False, drop_last = False)
+    test_dataset = shapenet.shapenet(cfg.root, split="test")
+    test_loader = DataLoader(test_dataset, 1, shuffle=False, drop_last=False)
 
     meter = Meter()
 

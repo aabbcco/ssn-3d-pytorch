@@ -8,9 +8,8 @@ from skimage.color import rgb2lab
 from lib.dataset.shapenet import shapenet, shapenet_spix
 from lib.utils.pointcloud_io import write
 from torch.utils.data import DataLoader
-from lib.ssn.ssn import soft_slic_all
+from lib.ssn.ssn import soft_slic_all,soft_slic_pknn
 from lib.MEFEAM.MEFEAM import LMFEAM
-from lib.ssn.ssn import soft_slic_pknn
 
 
 class LMFEAM_SSN(nn.Module):
@@ -21,7 +20,7 @@ class LMFEAM_SSN(nn.Module):
                  n_iter=10,
                  RGB=False,
                  normal=False,
-                 backend=soft_slic_all):
+                 backend=soft_slic_pknn):
         super().__init__()
         self.nspix = nspix
         self.n_iter = n_iter
@@ -83,7 +82,7 @@ if __name__ == "__main__":
         "-w",
         default="log_lmnfeam_pknn-spix/model_epoch_17_614_iter_13500.pth",
         type=str,
-        help="/path/to/pretrained_weight") 
+        help="/path/to/pretrained_weight")
     parser.add_argument("--fdim",
                         "-d",
                         default=10,

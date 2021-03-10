@@ -185,21 +185,20 @@ class mlp(nn.Module):
 
 
 class MFEM(nn.Module):
-    """
-    origional MFEM module
-    Args:
-        mlp_multiscale (list): sequence to construct multi_scale_mlp
-        mlp_global(list):sequence to construct mlp for global feature
-        mlp_msf(list):sequence to construct mlp for Multi-Scale Locality Feature Spaces
-        nsample (int): knn sample
-        channel_in (int): input channel
-        point_scale (list): scales
-        grouping (function): query_ball or knn
-    """
-
     def __init__(self, mlp_multiscale, mlp_global, mlp_msf, nsample, channel_in, point_scale, grouping=sample_and_group_knn):
-
+        """
+        origional MFEM module
+        Args:
+            mlp_multiscale (list): sequence to construct multi_scale_mlp
+            mlp_global(list):sequence to construct mlp for global feature
+            mlp_msf(list):sequence to construct mlp for Multi-Scale Locality Feature Spaces
+            nsample (int): knn sample
+            channel_in (int): input channel
+            point_scale (list): scales
+            grouping (function): query_ball or knn
+        """
         super().__init__()
+        
         # sample_and_group_knn(radius, nsample, xyz, points, use_xyz)
         self.sample_and_group = grouping
         self.nsample = nsample
@@ -253,16 +252,15 @@ class MFEM(nn.Module):
 
 
 class LFAM(nn.Module):
-    """
-    LFAM module in MFEAM
-    Args:
-        nsample (int): nsample in sample and group
-        mlp (list): mlp structure used for feature fusion
-        channel_in (int): input feature channel
-        grouping (function):grouping method,knn or query_ball,Defaults to knn.
-    """
-
     def __init__(self, nsample, mlp_fusion, channel_in, grouping=sample_and_group_knn):
+        """
+        LFAM module in MFEAM
+        Args:
+            nsample (int): nsample in sample and group
+            mlp (list): mlp structure used for feature fusion
+            channel_in (int): input feature channel
+            grouping (function):grouping method,knn or query_ball,Defaults to knn.
+        """
         super().__init__()
         self.sample_and_group = grouping
         self.nsample = nsample

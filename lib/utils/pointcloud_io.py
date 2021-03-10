@@ -154,8 +154,8 @@ def read(filename):
 def getlablecount(pointcloud):
     maxcount = 0
     for _, point in enumerate(pointcloud):
-        if maxcount < point[3]:
-            maxcount = point[3]
+        if maxcount < point:
+            maxcount = point
     return int(maxcount + 1)
 
 
@@ -170,9 +170,7 @@ def CalAchievableSegAcc(pointcloud, gt):
         hashmap[int(pointcloud[i, 3]), int(gt_point[3])] += 1
         classgt[int(gt_point[3])] += 1
 
-    print(hashmap.shape)
     maxpos = np.argmax(hashmap, axis=-1)  # returns an idx?
-    print(maxpos)
     for i, hash_idx in enumerate(hashmap):
         classpred[maxpos[i]] += hash_idx[maxpos[i]]
 
@@ -189,9 +187,7 @@ def CalAchievableSegAccSingle(pointcloud, gt):
         hashmap[int(pointcloud[i]), int(gt_point)] += 1
         classgt[int(gt_point)] += 1
 
-    print(hashmap.shape)
     maxpos = np.argmax(hashmap, axis=-1)  # returns an idx?
-    print(maxpos)
     for i, hash_idx in enumerate(hashmap):
         classpred[maxpos[i]] += hash_idx[maxpos[i]]
 
@@ -210,7 +206,7 @@ def CalUnderSegErrSingle(pointcloud,gt,is_new=True):
         hashmap[int(gt_point),int(pointcloud[i])]+=1
         label_count[int(gt_point)]+=1
         pixel_count[int(pointcloud[i])] += 1
-    
+
     if(is_new):
         for i,hash_idx in enumerate(hashmap):
             for j,hash_idxx in enumerate(hash_idx):
@@ -220,7 +216,7 @@ def CalUnderSegErrSingle(pointcloud,gt,is_new=True):
         for i,hash_idx in enumerate(hashmap):
             for j,hash_idxx in enumerate(hash_idx):
                 if (hash_idxx != 0): label_pixel[j] += pixel_count[j];
-    
+
     errcount = label_pixel.sum()
 
     return float(errcount) / float(gt.shape[0])
@@ -238,7 +234,7 @@ def CalUnderSegErr(pointcloud,gt,is_new=True):
         hashmap[int(gt_point[3]),int(pointcloud[i,3])]+=1
         label_count[int(gt_point[3])]+=1
         pixel_count[int(pointcloud[i,3])] += 1
-    
+
     if(is_new):
         for i,hash_idx in enumerate(hashmap):
             for j,hash_idxx in enumerate(hash_idx):
@@ -248,11 +244,11 @@ def CalUnderSegErr(pointcloud,gt,is_new=True):
         for i,hash_idx in enumerate(hashmap):
             for j,hash_idxx in enumerate(hash_idx):
                 if (hash_idxx != 0): label_pixel[j] += pixel_count[j];
-    
+
     errcount = label_pixel.sum()
 
     return float(errcount) / float(gt.shape[0])
-        
+
 
 if __name__ == "__main__":
     XYZ = './repack.pcd'
