@@ -110,7 +110,7 @@ class bistream_SSN(nn.Module):
     def __init__(self,
                  feature_dim,
                  nspix,
-                 mfem_dim,
+                 mfem_dim=6,
                  n_iter=10,
                  RGB=False,
                  Normal=False,
@@ -120,7 +120,7 @@ class bistream_SSN(nn.Module):
         self.n_iter = n_iter
         self.feature_dim = feature_dim
         self.backend = backend
-        self.mfeam = mfeam(self.feature_dim)
+        self.mfeam = mfeam(self.feature_dim, mfem_dim,RGB,Normal)
         self.ptnet = ptnet(self.feature_dim)
         self.mpl_fusion = mlp([self.feature_dim * 2, self.feature_dim],
                               self.feature_dim * 2,

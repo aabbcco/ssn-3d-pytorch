@@ -9,49 +9,41 @@ from tensorboardX import SummaryWriter
 from models.bistream import bistream_SSN
 from lib.utils.meter import Meter
 from lib.ssn.ssn import soft_slic_pknn
-from lib.dataset import shapenet, augmentation
+from lib.dataset import shapenet
 from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse
 from lib.MEFEAM.MEFEAM import discriminative_loss
+from lib.utils.pointcloud_io import CalAchievableSegAccSingle, CalUnderSegErrSingle
 
 
 @torch.no_grad()
 def eval(model, loader, pos_scale, device):
-    def achievable_segmentation_accuracy(superpixel, label):
-        """
-        Function to calculate Achievable Segmentation Accuracy:
-            ASA(S,G) = sum_j max_i |s_j \cap g_i| / sum_i |g_i|
-
-        Args:
-            input: superpixel image (H, W),
-            output: ground-truth (H, W)
-        """
-        TP = 0
-        unique_id = np.unique(superpixel)
-        for uid in unique_id:
-            mask = superpixel == uid
-            label_hist = np.histogram(label[mask])
-            maximum_regionsize = label_hist[0].max()
-            TP += maximum_regionsize
-        return TP / label.size
-
     model.eval()  # change the mode of model to eval
     sum_asa = 0
+    sum_usa = 0
+    cnt = 0
     for data in loader:
-        inputs, labels, _ = data  # b*c*npoint
+        cnt += 1
+        inputs, labels, labels_num = data  # b*c*npoint
 
         inputs = inputs.to(device)  # b*c*w*h
-        labels = labels.to(device)  # sematic_lable
-
+        #labels = labels.to(device)  # sematic_lable
         inputs = pos_scale * inputs
         # calculation,return affinity,hard lable,feature tensor
-        Q, H, feat = model(inputs)
-
-        asa = achievable_segmentation_accuracy(
-            H.to("cpu").detach().numpy(),
-            labels.to("cpu").numpy())  # return data to cpu
+        (Q, H, _, _), msf_feature = model(inputs)
+        H = H.squeeze(0).to("cpu").detach().numpy()
+        labels_num = labels_num.squeeze(0).numpy()
+        asa = CalAchievableSegAccSingle(H, labels_num)
+        usa = CalUnderSegErrSingle(H, labels_num)
         sum_asa += asa
+        sum_usa += usa
+        if (100 == cnt):
+            break
     model.train()
-    return sum_asa / len(loader)  # cal asa
+    asaa = sum_asa / 100.0
+    usaa = sum_usa / 100.0
+    strs = "[test]:asa: {:.5f},ue: {:.5f}".format(asaa, usaa)
+    print(strs)
+    return asaa, usaa  # cal asa
 
 
 def update_param(data, model, optimizer, compactness, pos_scale, device,
@@ -70,7 +62,7 @@ def update_param(data, model, optimizer, compactness, pos_scale, device,
     disc = disc_loss(msf, labels_num)
     #uniform_compactness = uniform_compact_loss(Q,coords.reshape(*coords.shape[:2], -1), H,device=device)
 
-    loss = recons_loss + compactness * compact_loss + 0.1 * disc
+    loss = recons_loss + compactness * compact_loss + 0.05 * disc
 
     optimizer.zero_grad()  # clear previous grad
     loss.backward()  # cal the grad
@@ -81,7 +73,6 @@ def update_param(data, model, optimizer, compactness, pos_scale, device,
         "reconstruction": recons_loss.item(),
         "disc_loss": disc,
         "compact": compact_loss.item(),
-        "lr": optimizer.state_dict()['param_groups'][0]['lr']
     }
 
 
@@ -108,6 +99,7 @@ def train(cfg):
                               num_workers=cfg.nworkers)
 
     test_dataset = shapenet.shapenet(cfg.root, split="test")
+    test_loader = DataLoader(test_dataset, 1, shuffle=False, drop_last=False)
 
     meter = Meter()
 
@@ -132,13 +124,17 @@ def train(cfg):
                               iterations)
             writer.add_scalar("loss/disc_loss", metric["disc_loss"],
                               iterations)
-            if (iterations % 1000) == 0:
-                torch.save(
-                    model.state_dict(),
-                    os.path.join(
-                        cfg.out_dir, "model_epoch_" + str(epoch_idx) + "_" +
-                        str(batch_iterations) + '_iter_' + str(iterations) +
-                        ".pth"))
+            if (iterations % 200) == 0:
+                (asa, usa) = eval(model, test_loader, cfg.pos_scale, device)
+                writer.add_scalar("test/asa", asa, iterations)
+                writer.add_scalar("test/ue", usa, iterations)
+                if (iterations % 1000) == 0:
+                    strs = "ep_{:}_batch_{:}_iter_{:}_asa_{:.3f}_ue_{:.3f}.pth".format(
+                        epoch_idx, batch_iterations, iterations, asa, usa)
+                    torch.save(
+                        model.state_dict(),
+                        os.path.join(
+                            cfg.out_dir, strs))
             # if (iterations % cfg.test_interval) == 0:
             #     asa = eval(model, test_loader, cfg.pos_scale,  device)
             #     print(f"validation asa {asa}")
