@@ -95,9 +95,8 @@ class mfeam(nn.Module):
             self.channel += 3
         if normal:
             self.channel += 3
-
         self.mfem = MFEM([32, 64], [128, 128], [64, mfem_dim], 32, 3,
-                         [0.2, 0.4, 0.6])
+                         [0.2, 0.3, 0.4])
         self.lfam = LFAM(32, [128, 10], 128 + mfem_dim)
 
     def forward(self, x):

@@ -63,8 +63,7 @@ def update_param(data, model, optimizer, compactness, pos_scale, device,
 
     #uniform_compactness = uniform_compact_loss(Q,coords.reshape(*coords.shape[:2], -1), H,device=device)
 
-    loss = recons_loss + compactness * compact_loss+0.01*disc
-
+    loss = recons_loss + compactness * compact_loss
     optimizer.zero_grad()  # clear previous grad
     loss.backward()  # cal the grad
     optimizer.step()  # backprop
@@ -174,7 +173,7 @@ if __name__ == "__main__":
                         default='../shapenet_part_seg_hdf5_data',
                         help="/ path/to/shapenet")
     parser.add_argument("--out_dir",
-                        default="./log_MNFEAM_pknn",
+                        default="./log_MNFEAM_pknn_ndisc",
                         type=str,
                         help="/path/to/output directory")
     parser.add_argument("--batchsize", default=8, type=int)
