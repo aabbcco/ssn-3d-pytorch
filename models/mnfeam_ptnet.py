@@ -170,7 +170,7 @@ def update_param(data, model, optimizer, compactness, pos_scale, device,
     disc = disc_loss(msf, labels_num)
     #uniform_compactness = uniform_compact_loss(Q,coords.reshape(*coords.shape[:2], -1), H,device=device)
 
-    loss = recons_loss + compactness * compact_loss + 0.05 * disc
+    loss = recons_loss + compactness * compact_loss + 0.01 * disc
 
     optimizer.zero_grad()  # clear previous grad
     loss.backward()  # cal the grad

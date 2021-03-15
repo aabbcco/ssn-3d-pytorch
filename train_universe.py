@@ -79,10 +79,10 @@ if __name__ == "__main__":
                         default='../shapenet_part_seg_hdf5_data',
                         help="/ path/to/shapenet")
     parser.add_argument("--out_dir",
-                        default="./log_bistream",
+                        default="./log_bistreamm",
                         type=str,
                         help="/path/to/output directory")
-    parser.add_argument("--batchsize", default=12, type=int)
+    parser.add_argument("--batchsize", default=8, type=int)
     parser.add_argument("--nworkers",
                         default=8,
                         type=int,
