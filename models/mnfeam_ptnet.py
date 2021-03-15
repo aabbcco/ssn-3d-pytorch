@@ -1,9 +1,11 @@
 import torch
 import torch.nn as nn
-from lib.pointnet.pointnet import STN3d, STNkd, feature_transform_reguliarzer
+from lib.pointnet.pointnet import STN3d, STNkd
 import torch.nn.functional as F
 from lib.ssn.ssn import soft_slic_pknn
-from lib.MEFEAM.MEFEAM import MFEM, LFAM, mlp, sample_and_group_query_ball
+from lib.MEFEAM.MEFEAM import MFEM, mlp, sample_and_group_query_ball
+from lib.utils.pointcloud_io import CalAchievableSegAccSingle, CalUnderSegErrSingle
+from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse
 
 
 class ptnet(nn.Module):
@@ -87,26 +89,7 @@ class ptnet(nn.Module):
         return net
 
 
-class mfeam(nn.Module):
-    def __init__(self, feature_dim, mfem_dim=6, RGB=False, normal=False):
-        super().__init__()
-        self.channel = 3
-        if RGB:
-            self.channel += 3
-        if normal:
-            self.channel += 3
-
-        self.mfem = MFEM([32, 64], [128, 128], [64, mfem_dim], 32, 3,
-                         [0.2, 0.4, 0.6], sample_and_group_query_ball)
-        self.lfam = LFAM(32, [128, 10], 128 + mfem_dim)
-
-    def forward(self, x):
-        global_feature, msf_feature = self.mfem(x)
-        fusioned_feature = self.lfam(global_feature, msf_feature)
-        return fusioned_feature, msf_feature
-
-
-class bistream_SSN(nn.Module):
+class multi_ptnet_SSN(nn.Module):
     def __init__(self,
                  feature_dim,
                  nspix,
@@ -120,7 +103,8 @@ class bistream_SSN(nn.Module):
         self.n_iter = n_iter
         self.feature_dim = feature_dim
         self.backend = backend
-        self.mfeam = mfeam(self.feature_dim, mfem_dim,RGB,Normal)
+        self.mfem = MFEM([32, 64], [128, 128], [64, mfem_dim], 32, 3,
+                         [0.2, 0.3, 0.4], sample_and_group_query_ball)
         self.ptnet = ptnet(self.feature_dim)
         self.mpl_fusion = mlp([self.feature_dim * 2, self.feature_dim],
                               self.feature_dim * 2,
@@ -129,9 +113,88 @@ class bistream_SSN(nn.Module):
 
     def forward(self, x):
         ptnet_feature = self.ptnet(x)
-        mfeam_feature, msf_feature = self.mfeam(x)
-        combined_feature = torch.cat([ptnet_feature, mfeam_feature], dim=1)
+        global_feature, msf_feature = self.mfeam(x)
+        combined_feature = torch.cat([ptnet_feature, msf_feature], dim=1)
         fusioned_feature = self.mpl_fusion(combined_feature)
         return self.backend(fusioned_feature,
                             fusioned_feature[:, :, :self.nspix],
                             self.n_iter), msf_feature
+
+
+# training
+
+@torch.no_grad()
+def eval(model, loader, pos_scale, device):
+    model.eval()  # change the mode of model to eval
+    sum_asa = 0
+    sum_usa = 0
+    cnt = 0
+    for data in loader:
+        cnt += 1
+        inputs, labels, labels_num = data  # b*c*npoint
+
+        inputs = inputs.to(device)  # b*c*w*h
+        # labels = labels.to(device)  # sematic_lable
+        inputs = pos_scale * inputs
+        # calculation,return affinity,hard lable,feature tensor
+        (Q, H, _, _), msf_feature = model(inputs)
+        H = H.squeeze(0).to("cpu").detach().numpy()
+        labels_num = labels_num.squeeze(0).numpy()
+        asa = CalAchievableSegAccSingle(H, labels_num)
+        usa = CalUnderSegErrSingle(H, labels_num)
+        sum_asa += asa
+        sum_usa += usa
+        if (100 == cnt):
+            break
+    model.train()
+    asaa = sum_asa / 100.0
+    usaa = sum_usa / 100.0
+    strs = "[test]:asa: {:.5f},ue: {:.5f}".format(asaa, usaa)
+    print(strs)
+    return asaa, usaa  # cal asa
+
+
+def update_param(data, model, optimizer, compactness, pos_scale, device,
+                 disc_loss):
+    inputs, labels, labels_num = data
+
+    inputs = inputs.to(device)
+    labels = labels.to(device)
+
+    inputs = pos_scale * inputs
+
+    (Q, H, _, _), msf = model(inputs)
+
+    recons_loss = reconstruct_loss_with_cross_etnropy(Q, labels)
+    compact_loss = reconstruct_loss_with_mse(Q, inputs, H)
+    disc = disc_loss(msf, labels_num)
+    #uniform_compactness = uniform_compact_loss(Q,coords.reshape(*coords.shape[:2], -1), H,device=device)
+
+    loss = recons_loss + compactness * compact_loss + 0.05 * disc
+
+    optimizer.zero_grad()  # clear previous grad
+    loss.backward()  # cal the grad
+    optimizer.step()  # backprop
+
+    return {
+        "loss": loss.item(),
+        "reconstruction": recons_loss.item(),
+        "disc_loss": disc,
+        "compact": compact_loss.item(),
+    }
+
+
+def addscaler(metric, scalarWriter, iterations, test=False):
+    if not test:
+        scalarWriter.add_scalar("comprehensive/loss",
+                                metric["loss"], iterations)
+        scalarWriter.add_scalar("loss/reconstruction_loss",
+                                metric["reconstruction"], iterations)
+        scalarWriter.add_scalar("loss/compact_loss", metric["compact"],
+                                iterations)
+        scalarWriter.add_scalar("loss/disc_loss", metric["disc_loss"],
+                                iterations)
+    else:
+        (asa, usa) = metric
+        scalarWriter.add_scalar("test/asa", asa, iterations)
+        scalarWriter.add_scalar("test/ue", usa, iterations)
