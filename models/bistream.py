@@ -109,7 +109,7 @@ class bistream_SSN(nn.Module):
     def __init__(self,
                  feature_dim,
                  nspix,
-                 mfem_dim=6,
+                 mfem_dim=10,
                  n_iter=10,
                  RGB=False,
                  Normal=False,

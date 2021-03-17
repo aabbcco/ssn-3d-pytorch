@@ -93,7 +93,6 @@ class multi_ptnet_SSN(nn.Module):
     def __init__(self,
                  feature_dim,
                  nspix,
-                 mfem_dim=6,
                  n_iter=10,
                  RGB=False,
                  Normal=False,
@@ -103,7 +102,7 @@ class multi_ptnet_SSN(nn.Module):
         self.n_iter = n_iter
         self.feature_dim = feature_dim
         self.backend = backend
-        self.mfem = MFEM([32, 64], [128, 128], [64, mfem_dim], 32, 3,
+        self.mfem = MFEM([32, 64], [128, 128], [64, self.feature_dim], 32, 3,
                          [0.2, 0.3, 0.4], sample_and_group_query_ball)
         self.ptnet = ptnet(self.feature_dim)
         self.mpl_fusion = mlp([self.feature_dim * 2, self.feature_dim],
