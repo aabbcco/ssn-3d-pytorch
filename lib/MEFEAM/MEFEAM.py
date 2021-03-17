@@ -184,8 +184,8 @@ class mlp(nn.Module):
         return self.mlp_(x)
 
 
-class multi_feature_aggregation(nn.Module):
-    def __init__(self, mlp_multiscale, mlp_fushion, nsample, channel_in, point_scale, xyz, bn=False, grouping=sample_and_group_query_ball):
+class MultiScaleFeatureAggregation(nn.Module):
+    def __init__(self, mlp_multiscale, mlp_fushion, nsample, channel_in, point_scale, xyz=False, bn=False, grouping=sample_and_group_query_ball):
         """
         multi_scale part in MFEM module
         Args:
