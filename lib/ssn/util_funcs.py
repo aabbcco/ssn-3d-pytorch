@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 from sklearn.neighbors import NearestNeighbors
 from typing import Union
 from time import time
-#comes from PointCNN.Pytorch repository
-#https://github.com/hxdengBerkeley/PointCNN.Pytorch.git
+# comes from PointCNN.Pytorch repository
+# https://github.com/hxdengBerkeley/PointCNN.Pytorch.git
 
 # Types to allow for both CPU and GPU models.
 UFloatTensor = Union[FloatTensor, cuda.FloatTensor]
@@ -56,7 +56,7 @@ def knn_indices_func_gpu(seed: cuda.FloatTensor,  # (B,C,npoint)
         l       (int)               : k neibor in knn 
     Returns:
         cuda.LongTensor: knn idx(B,npoint,k)
-    """    
+    """
     _, _, N = seed.shape
     _, _, M = pts.shape
     mseed = seed.unsqueeze(-1).expand(-1, -1, -1, M)

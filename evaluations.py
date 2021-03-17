@@ -59,7 +59,7 @@ def boundary_circumference(superpixel):
     hidx = np.where(mask[:, 0] == 0)
     max = 0
     min = 0
-    #cal the length of horizontial image boundary for superpixels that reaches the boundary
+    # cal the length of horizontial image boundary for superpixels that reaches the boundary
     for _, single_idx in enumerate(hidx[0]):
         if mask[single_idx, 1] > max:
             max = mask[single_idx, 1]
@@ -67,7 +67,7 @@ def boundary_circumference(superpixel):
             min = mask[single_idx, 1]
     hori = max-min
     vidx = np.where(mask[:, 1] == 0)
-    #find the
+    # find the
     max = min = 0
     for _, single_idx in enumerate(vidx[0]):
         if mask[single_idx, 0] > max:
@@ -132,7 +132,7 @@ def boundary_recall(segmentation, groundTruth, connectivity8=False):
             return True
         if(y < gt.shape[1]-1 and gt[x][y+1] == 1):
             return True
-        
+
         return False
 
     def is8Connective(gt, x, y):
