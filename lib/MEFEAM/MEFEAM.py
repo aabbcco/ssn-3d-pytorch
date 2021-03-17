@@ -197,6 +197,54 @@ class mlp(nn.Module):
         return self.mlp_(x)
 
 
+class multi_feature_aggregation(nn.Module):
+    def __init__(self, mlp_multiscale, mlp_fushion, nsample, channel_in, point_scale, xyz, bn=False, grouping=sample_and_group_query_ball):
+        """
+        multi_scale part in MFEM module
+        Args:
+            mlp_multiscale (list): sequence to construct multi_scale_mlp
+            mlp_fushion(list):sequence to construct mlp for fushioned feature
+            nsample (int): knn sample
+            channel_in (int): input channel
+            point_scale (list): scales
+            bn(bool):if che model place bn in mlp_fusion
+            grouping (function): query_ball or knn
+        """
+        super().__init__()
+        self.sample_and_group = grouping
+        self.nsample = nsample
+        self.scale = point_scale
+        self.xyz = xyz
+        self.bn = bn
+
+        self.scale0 = mlp_2d(mlp_multiscale, channel_in, 'scale0', nn.ReLU)
+        self.scale1 = mlp_2d(mlp_multiscale, channel_in, 'scale1', nn.ReLU)
+        self.scale2 = mlp_2d(mlp_multiscale, channel_in, 'scale2', nn.ReLU)
+
+        self.mlp_fusion = mlp(mlp_fushion, channel_in,
+                              'fushion', nn.ReLU, bn=self.bn)
+
+    def forward(self, x):
+        point0 = self.sample_and_group(
+            self.scale[0], self.nsample, x, x, self.xyz)
+        point1 = self.sample_and_group(
+            self.scale[1], self.nsample, x, x, self.xyz)
+        point2 = self.sample_and_group(
+            self.scale[2], self.nsample, x, x, self.xyz)
+
+        point0 = self.scale0(point0)
+        point1 = self.scale1(point1)
+        point2 = self.scale2(point2)
+
+        point0, _ = point0.max(-1)
+        point1, _ = point1.max(-1)
+        point2, _ = point2.max(-1)
+
+        fusioned_feature = self.mlp_fusion(x)
+
+        return fusioned_feature
+
+
 class MFEM(nn.Module):
     def __init__(self,
                  mlp_multiscale,
@@ -335,7 +383,7 @@ class LMFEAM(nn.Module):
 
         super().__init__()
 
-        #MFEM part
+        # MFEM part
         self.sample_and_group = grouping
         self.nsample = nsample
         self.scale = point_scale
@@ -349,6 +397,7 @@ class LMFEAM(nn.Module):
                               name='global',
                               activation=nn.ReLU)
 
+<<<<<<< HEAD
         self.mlp_MSF = mlp(mlp_msf,
                            mlp_global[-1],
                            name="msf",
@@ -358,6 +407,13 @@ class LMFEAM(nn.Module):
                              mlp_global[-1] + mlp_msf[-1],
                              name='output mlp',
                              activation=nn.ReLU)
+=======
+        self.mlp_MSF = mlp(
+            mlp_msf, mlp_global[-1], name="msf", activation=nn.ReLU)
+        # LFAM part
+        self.mlp_fu = mlp_2d(mlp_fushion, mlp_global[-1]+mlp_msf[-1],
+                             name='output mlp', activation=nn.ReLU)
+>>>>>>> fd4110116e3612cc6608ffb48e30913e8e7071b3
 
     def forward(self, x):
         """forward of LMFEAM
@@ -369,7 +425,7 @@ class LMFEAM(nn.Module):
             global_feature(Tensor):
             msf_feature(Tensor):
         """
-        #MFEM
+        # MFEM
         # [B,C,N]->[B,C,nsample,N]
         point0 = self.sample_and_group(self.scale[0], 8, x, x, True)
         point1 = self.sample_and_group(self.scale[1], 16, x, x, True)
@@ -391,8 +447,8 @@ class LMFEAM(nn.Module):
         pointwise_global = self.mlp_global(point)
         msf = self.mlp_MSF(pointwise_global)
 
-        #LFAM part
-        #[B,m,nsample,N]
+        # LFAM part
+        # [B,m,nsample,N]
         msf_grouped = self.sample_and_group(1, self.nsample, msf, msf)
         global_reapeted = torch.unsqueeze(pointwise_global,
                                           -1).repeat(1, 1, 1, self.nsample)

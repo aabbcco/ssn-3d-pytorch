@@ -62,7 +62,11 @@ def update_param(data, model, optimizer, compactness, pos_scale, device,
     disc = disc_loss(msf, labels_num)
     #uniform_compactness = uniform_compact_loss(Q,coords.reshape(*coords.shape[:2], -1), H,device=device)
 
+<<<<<<< HEAD
+    loss = recons_loss + compactness * compact_loss + 0.001 * disc
+=======
     loss = recons_loss + compactness * compact_loss+1e-3*disc
+>>>>>>> ad59c2986a8214b758c7150396c185013fc7837b
 
     optimizer.zero_grad()  # clear previous grad
     loss.backward()  # cal the grad
@@ -177,7 +181,7 @@ if __name__ == "__main__":
                         type=int,
                         help="number of iterations for differentiable SLIC")
     parser.add_argument("--nspix",
-                        default=50,
+                        default=100,
                         type=int,
                         help="number of superpixels")
     parser.add_argument("--pos_scale", default=10, type=float)

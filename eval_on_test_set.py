@@ -108,7 +108,7 @@ if __name__ == "__main__":
     dataset = bsds.BSDS(args.root, split='val')
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
 
-    #generate number of spix from 100 to nspix asstep 100
+    # generate number of spix from 100 to nspix asstep 100
     for i in range(100, args.nspix+1, 100):
         if not os.path.exists(args.dest):
             os.mkdir(args.dest)
@@ -123,13 +123,13 @@ if __name__ == "__main__":
             model.eval()
         else:
             def model(data): return sparse_ssn_iter(data, i, n_iter)
-        
+
         # throw every image into the net
         for data in dataloader:
             image, label, name = data
             height, width = image.shape[-2:]
             label_pred = inference(image, args.nspix, args.niter,
-                                model, args.fdim, args.color_scale, args.pos_scale)
+                                   model, args.fdim, args.color_scale, args.pos_scale)
             label = label.argmax(1).reshape(height, width).numpy()
             np.savetxt(os.path.join(args.dest,
                                     str(i), name[0]+'.csv'), label_pred, fmt='%d', delimiter=',')

@@ -14,7 +14,7 @@ from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss
 
 
 @torch.no_grad()
-def eval(model, loader, color_scale, pos_scale, device,num_sample = 50):
+def eval(model, loader, color_scale, pos_scale, device, num_sample=50):
     def achievable_segmentation_accuracy(superpixel, label):
         """
         Function to calculate Achievable Segmentation Accuracy:
@@ -48,7 +48,7 @@ def eval(model, loader, color_scale, pos_scale, device,num_sample = 50):
         pos_scale = pos_scale * \
             max(nspix_per_axis / height, nspix_per_axis / width)  # dont konw
 
-        #add coords for each pixel,B*(C+2)*W*H
+        # add coords for each pixel,B*(C+2)*W*H
         coords = torch.stack(torch.meshgrid(torch.arange(
             height, device=device), torch.arange(width, device=device)), 0)  # 2*W*H?
         # whats the meaning of repeat?#B*2*W*H
@@ -70,7 +70,7 @@ def eval(model, loader, color_scale, pos_scale, device,num_sample = 50):
     return sum_asa / len(loader)  # cal asa
 
 
-def update_param(data, model, optimizer,spix_weight, compactness, color_scale, pos_scale, device):
+def update_param(data, model, optimizer, spix_weight, compactness, color_scale, pos_scale, device):
     inputs, labels, spix, _ = data
 
     inputs = inputs.to(device)
@@ -134,7 +134,7 @@ def train(cfg):
         for data in train_loader:
             iterations += 1
             metric = update_param(
-                data, model, optimizer,cfg.spix_weight, cfg.compactness, cfg.color_scale, cfg.pos_scale,  device)
+                data, model, optimizer, cfg.spix_weight, cfg.compactness, cfg.color_scale, cfg.pos_scale,  device)
             meter.add(metric)
             state = meter.state(f"[{iterations}/{cfg.train_iter}]")
             print(state)
@@ -185,7 +185,7 @@ if __name__ == "__main__":
     parser.add_argument("--pos_scale", default=2.5, type=float)
     parser.add_argument("--compactness", default=1e-4, type=float)
     parser.add_argument("--test_interval", default=1000, type=int)
-    parser.add_argument('--spix_weight',default=0.5,type=int)
+    parser.add_argument('--spix_weight', default=0.5, type=int)
 
     args = parser.parse_args()
 

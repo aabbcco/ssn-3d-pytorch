@@ -60,7 +60,7 @@ class get_model(nn.Module):
         out_max = torch.max(out5, 2, keepdim=True)[0]
         out_max = out_max.view(-1, 2048)
 
-        out_max = torch.cat([out_max,label.squeeze(1)],1)
+        out_max = torch.cat([out_max, label.squeeze(1)], 1)
         expand = out_max.view(-1, 2048+16, 1).repeat(1, 1, N)
         concat = torch.cat([expand, out1, out2, out3, out4, out5], 1)
         net = F.relu(self.bns1(self.convs1(concat)))
@@ -69,7 +69,7 @@ class get_model(nn.Module):
         net = self.convs4(net)
         net = net.transpose(2, 1).contiguous()
         net = F.log_softmax(net.view(-1, self.part_num), dim=-1)
-        net = net.view(B, N, self.part_num) # [B, N, 50]
+        net = net.view(B, N, self.part_num)  # [B, N, 50]
 
         return net, trans_feat
 
