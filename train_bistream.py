@@ -26,7 +26,7 @@ def eval(model, loader, pos_scale, device):
         inputs, labels, labels_num = data  # b*c*npoint
 
         inputs = inputs.to(device)  # b*c*w*h
-        #labels = labels.to(device)  # sematic_lable
+        # labels = labels.to(device)  # sematic_lable
         inputs = pos_scale * inputs
         # calculation,return affinity,hard lable,feature tensor
         (Q, H, _, _), msf_feature = model(inputs)
@@ -62,11 +62,7 @@ def update_param(data, model, optimizer, compactness, pos_scale, device,
     disc = disc_loss(msf, labels_num)
     #uniform_compactness = uniform_compact_loss(Q,coords.reshape(*coords.shape[:2], -1), H,device=device)
 
-<<<<<<< HEAD
-    loss = recons_loss + compactness * compact_loss + 0.001 * disc
-=======
     loss = recons_loss + compactness * compact_loss+1e-3*disc
->>>>>>> ad59c2986a8214b758c7150396c185013fc7837b
 
     optimizer.zero_grad()  # clear previous grad
     loss.backward()  # cal the grad
@@ -75,7 +71,7 @@ def update_param(data, model, optimizer, compactness, pos_scale, device,
     return {
         "loss": loss.item(),
         "reconstruction": recons_loss.item(),
-        "disc_loss":(1e-3 *disc).item(),
+        "disc_loss": (1e-3 * disc).item(),
         "compact": compact_loss.item(),
     }
 
@@ -91,7 +87,7 @@ def train(cfg):
                          cfg.niter,
                          backend=soft_slic_pknn).to(device)
 
-    disc_loss = discriminative_loss(0.1, 0.5,1e-4)
+    disc_loss = discriminative_loss(0.1, 0.5, 1e-4)
 
     optimizer = optim.Adam(model.parameters(), cfg.lr)
 
