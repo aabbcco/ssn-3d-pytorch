@@ -1,4 +1,3 @@
-from models.mnfeam_ptnet import addscaler
 import os
 import time
 import torch
@@ -10,7 +9,7 @@ from lib.utils.meter import Meter
 from lib.ssn.ssn import soft_slic_pknn
 from lib.dataset import shapenet
 from lib.MEFEAM.MEFEAM import discriminative_loss
-from models.mnfeam_ptnet import *
+from models.mfem_ptnet import *
 
 
 def train(cfg):
@@ -19,7 +18,7 @@ def train(cfg):
     else:
         device = "cpu"
 
-    model = bistream_SSN(cfg.fdim,
+    model = multi_ptnet_SSN(cfg.fdim,
                          cfg.nspix,
                          cfg.niter,
                          backend=soft_slic_pknn).to(device)
@@ -79,7 +78,7 @@ if __name__ == "__main__":
                         default='../shapenet_part_seg_hdf5_data',
                         help="/ path/to/shapenet")
     parser.add_argument("--out_dir",
-                        default="./log_bistreamm",
+                        default="./mfem_ptnet",
                         type=str,
                         help="/path/to/output directory")
     parser.add_argument("--batchsize", default=8, type=int)
