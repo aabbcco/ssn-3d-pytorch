@@ -3,16 +3,50 @@ import math
 import numpy as np
 import time
 import torch
+from torch.nn import Module
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
-from models.bistream import bistream_SSN
+
 from lib.utils.meter import Meter
-from lib.ssn.ssn import soft_slic_pknn
-from lib.dataset import shapenet
-from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse
-from lib.MEFEAM.MEFEAM import discriminative_loss
+from lib.dataset import shapenet, augmentation
 from lib.utils.pointcloud_io import CalAchievableSegAccSingle, CalUnderSegErrSingle
+from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse, uniform_compact_loss
+from lib.MEFEAM.MEFEAM import discriminative_loss, LMFEAM, sample_and_group_query_ball
+
+from lib.ssn.ssn import soft_slic_all, soft_slic_pknn
+
+
+class LMFEAM_SSN(Module):
+    def __init__(self,
+                 feature_dim,
+                 nspix,
+                 mfem_dim=6,
+                 n_iter=10,
+                 RGB=False,
+                 normal=False,
+                 backend=soft_slic_all):
+        super().__init__()
+        self.nspix = nspix
+        self.n_iter = n_iter
+        self.channel = 3
+        self.backend = backend
+        if RGB:
+            self.channel += 3
+        if normal:
+            self.channel += 3
+        #[32, 64], [128, 128], [64, mfem_dim], 32,3 , [0.2, 0.4, 0.6]
+        self.lmfeam = LMFEAM([32, 64], [128, 128], [64, mfem_dim],
+                             [128, 64, feature_dim],
+                             32,
+                             self.channel,
+                             point_scale=[0.2, 0.4, 0.6],
+                             grouping=sample_and_group_query_ball)
+
+    def forward(self, x):
+        feature, msf = self.lmfeam(x)
+        return self.backend(feature, feature[:, :, :self.nspix],
+                            self.n_iter), msf
 
 
 @torch.no_grad()
@@ -36,8 +70,7 @@ def eval(model, loader, pos_scale, device):
         usa = CalUnderSegErrSingle(H, labels_num)
         sum_asa += asa
         sum_usa += usa
-        if (100 == cnt):
-            break
+        if (100 == cnt): break
     model.train()
     asaa = sum_asa / 100.0
     usaa = sum_usa / 100.0
@@ -55,18 +88,15 @@ def update_param(data, model, optimizer, compactness, pos_scale, device,
 
     inputs = pos_scale * inputs
 
-    (Q, H, _, _), msf = model(inputs)
+    (Q, H, _, _), msf_feature = model(inputs)
 
     recons_loss = reconstruct_loss_with_cross_etnropy(Q, labels)
     compact_loss = reconstruct_loss_with_mse(Q, inputs, H)
-    disc = disc_loss(msf, labels_num)
+    disc = disc_loss(msf_feature, labels_num)
+
     #uniform_compactness = uniform_compact_loss(Q,coords.reshape(*coords.shape[:2], -1), H,device=device)
 
-<<<<<<< HEAD
-    loss = recons_loss + compactness * compact_loss + 0.001 * disc
-=======
-    loss = recons_loss + compactness * compact_loss+1e-3*disc
->>>>>>> ad59c2986a8214b758c7150396c185013fc7837b
+    loss = recons_loss + compactness * compact_loss + 0.01 * disc
 
     optimizer.zero_grad()  # clear previous grad
     loss.backward()  # cal the grad
@@ -75,8 +105,8 @@ def update_param(data, model, optimizer, compactness, pos_scale, device,
     return {
         "loss": loss.item(),
         "reconstruction": recons_loss.item(),
-        "disc_loss":(1e-3 *disc).item(),
         "compact": compact_loss.item(),
+        "disc": disc.item()
     }
 
 
@@ -86,12 +116,9 @@ def train(cfg):
     else:
         device = "cpu"
 
-    model = bistream_SSN(cfg.fdim,
-                         cfg.nspix,
-                         cfg.niter,
-                         backend=soft_slic_pknn).to(device)
+    model = LMFEAM_SSN(10, 50, backend=soft_slic_pknn).to(device)
 
-    disc_loss = discriminative_loss(0.1, 0.5,1e-4)
+    disc_loss = discriminative_loss(0.1, 0.1)
 
     optimizer = optim.Adam(model.parameters(), cfg.lr)
 
@@ -112,8 +139,8 @@ def train(cfg):
     for epoch_idx in range(cfg.train_epoch):
         batch_iterations = 0
         for data in train_loader:
-            batch_iterations += 1
             iterations += 1
+            batch_iterations += 1
             metric = update_param(data, model, optimizer, cfg.compactness,
                                   cfg.pos_scale, device, disc_loss)
             meter.add(metric)
@@ -126,8 +153,7 @@ def train(cfg):
                               metric["reconstruction"], iterations)
             writer.add_scalar("loss/compact_loss", metric["compact"],
                               iterations)
-            writer.add_scalar("loss/disc_loss", metric["disc_loss"],
-                              iterations)
+            writer.add_scalar("loss/disc_loss", metric["disc"], iterations)
             if (iterations % 200) == 0:
                 (asa, usa) = eval(model, test_loader, cfg.pos_scale, device)
                 writer.add_scalar("test/asa", asa, iterations)
@@ -135,18 +161,8 @@ def train(cfg):
                 if (iterations % 1000) == 0:
                     strs = "ep_{:}_batch_{:}_iter_{:}_asa_{:.3f}_ue_{:.3f}.pth".format(
                         epoch_idx, batch_iterations, iterations, asa, usa)
-                    torch.save(
-                        model.state_dict(),
-                        os.path.join(
-                            cfg.out_dir, strs))
-            # if (iterations % cfg.test_interval) == 0:
-            #     asa = eval(model, test_loader, cfg.pos_scale,  device)
-            #     print(f"validation asa {asa}")
-            #     writer.add_scalar("comprehensive/asa", asa, iterations)
-            #     if asa > max_val_asa:
-            #         max_val_asa = asa
-            #         torch.save(model.state_dict(), os.path.join(
-            #             cfg.out_dir, "bset_model_sp_loss.pth"))
+                    torch.save(model.state_dict(),
+                               os.path.join(cfg.out_dir, strs))
 
     unique_id = str(int(time.time()))
     torch.save(model.state_dict(),
@@ -162,10 +178,10 @@ if __name__ == "__main__":
                         default='../shapenet_part_seg_hdf5_data',
                         help="/ path/to/shapenet")
     parser.add_argument("--out_dir",
-                        default="./log_bistream_ndisc",
+                        default="./log_lmnfeam_pknn-001",
                         type=str,
                         help="/path/to/output directory")
-    parser.add_argument("--batchsize", default=8, type=int)
+    parser.add_argument("--batchsize", default=16, type=int)
     parser.add_argument("--nworkers",
                         default=8,
                         type=int,
@@ -177,7 +193,7 @@ if __name__ == "__main__":
                         type=int,
                         help="embedding dimension")
     parser.add_argument("--niter",
-                        default=10,
+                        default=5,
                         type=int,
                         help="number of iterations for differentiable SLIC")
     parser.add_argument("--nspix",
