@@ -88,16 +88,16 @@ class ptnet(nn.Module):
 
 
 class mfeam(nn.Module):
-    def __init__(self, feature_dim, mfem_dim=6, RGB=False, normal=False):
+    def __init__(self, feature_dim, RGB=False, normal=False):
         super().__init__()
         self.channel = 3
         if RGB:
             self.channel += 3
         if normal:
             self.channel += 3
-        self.mfem = MFEM([32, 64], [128, 128], [64, mfem_dim], 32, 3,
+        self.mfem = MFEM([32, 64], [128, 128], [64, feature_dim], 32, 3,
                          [0.2, 0.3, 0.4])
-        self.lfam = LFAM(32, [128, 10], 128 + mfem_dim)
+        self.lfam = LFAM(32, [128, 10], 128 + feature_dim)
 
     def forward(self, x):
         global_feature, msf_feature = self.mfem(x)
@@ -109,7 +109,6 @@ class bistream_SSN(nn.Module):
     def __init__(self,
                  feature_dim,
                  nspix,
-                 mfem_dim=10,
                  n_iter=10,
                  RGB=False,
                  Normal=False,
@@ -119,7 +118,7 @@ class bistream_SSN(nn.Module):
         self.n_iter = n_iter
         self.feature_dim = feature_dim
         self.backend = backend
-        self.mfeam = mfeam(self.feature_dim, mfem_dim, RGB, Normal)
+        self.mfeam = mfeam(self.feature_dim, RGB, Normal)
         self.ptnet = ptnet(self.feature_dim)
         self.mpl_fusion = mlp([self.feature_dim * 2, self.feature_dim],
                               self.feature_dim * 2,

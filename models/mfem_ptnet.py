@@ -112,7 +112,7 @@ class multi_ptnet_SSN(nn.Module):
 
     def forward(self, x):
         ptnet_feature = self.ptnet(x)
-        global_feature, msf_feature = self.mfeam(x)
+        global_feature, msf_feature = self.mfem(x)
         combined_feature = torch.cat([ptnet_feature, msf_feature], dim=1)
         fusioned_feature = self.mpl_fusion(combined_feature)
         return self.backend(fusioned_feature,
@@ -169,7 +169,7 @@ def update_param(data, model, optimizer, compactness, pos_scale, device,
     disc = disc_loss(msf, labels_num)
     #uniform_compactness = uniform_compact_loss(Q,coords.reshape(*coords.shape[:2], -1), H,device=device)
 
-    loss = recons_loss + compactness * compact_loss + 0.01 * disc
+    loss = recons_loss + compactness * compact_loss+1e-3*disc
 
     optimizer.zero_grad()  # clear previous grad
     loss.backward()  # cal the grad
