@@ -397,7 +397,6 @@ class LMFEAM(nn.Module):
                               name='global',
                               activation=nn.ReLU)
 
-<<<<<<< HEAD
         self.mlp_MSF = mlp(mlp_msf,
                            mlp_global[-1],
                            name="msf",
@@ -407,13 +406,6 @@ class LMFEAM(nn.Module):
                              mlp_global[-1] + mlp_msf[-1],
                              name='output mlp',
                              activation=nn.ReLU)
-=======
-        self.mlp_MSF = mlp(
-            mlp_msf, mlp_global[-1], name="msf", activation=nn.ReLU)
-        # LFAM part
-        self.mlp_fu = mlp_2d(mlp_fushion, mlp_global[-1]+mlp_msf[-1],
-                             name='output mlp', activation=nn.ReLU)
->>>>>>> fd4110116e3612cc6608ffb48e30913e8e7071b3
 
     def forward(self, x):
         """forward of LMFEAM
