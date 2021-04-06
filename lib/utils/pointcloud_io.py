@@ -114,7 +114,7 @@ def __pcd_data_formatter(data, header, asdict=False):
             pointer += 1
         if 'label' in header.fields:
             element['lebel'] = (data[:, 3+pointer]).astype(int)
-            point += 1
+            pointer += 1
 
         return element
 

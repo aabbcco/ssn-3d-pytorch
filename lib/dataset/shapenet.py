@@ -5,14 +5,14 @@ import h5py
 import numpy as np
 
 
-def convert_label(label):
+def convert_label(label,num=50):
 
     onehot = np.zeros(
-        (50, label.shape[0])).astype(np.float32)
+        (num, label.shape[0])).astype(np.float32)
 
     ct = 0
     for t in np.unique(label).tolist():
-        if ct >= 50:
+        if ct >= num:
             break
         else:
             onehot[ct, :] = (label == t)
@@ -36,20 +36,48 @@ class shapenet(Dataset):
 
     def __init__(self, datafolder, split='train'):
         assert split in ['train', 'val', 'test'], "split not exist"
-        listname = split + "_hdf5_file_list.txt"
+        filepath = os.path.join(datafolder, split)
         datalist = []
         labelist = []
-        datafile = open(os.path.join(datafolder, listname), 'r')
-        flist = datafile.readlines()
+        flist = getFiles_full(filepath, '.h5')
         for fname in flist:
             f = h5py.File(os.path.join(datafolder, fname.split('\n')[0]), 'r')
             datalist.append(np.array(f['data']))
             labelist.append(np.array(f['pid']))
-        self.data = np.concatenate(datalist, axis=0).transpose(0, 2, 1)
+        self.data = np.concatenate(datalist,axis=0).transpose(0,2,1)
         self.label = np.concatenate(labelist, axis=0)
 
     def __getitem__(self, idx):
         return Tensor(self.data[idx]), Tensor(convert_label(self.label[idx])), Tensor(self.label[idx])
+
+    def __len__(self):
+        return len(self.data)
+
+class shapenet_inst(Dataset):
+    """
+    shapenet dataset for Pytorch Dataloader\n
+    too slow in init time,need another implemention
+
+    Args:
+        datafolder (string): folder containing shapenet result
+        split (str, optional): options in train,test and val. Defaults to 'train'.
+"""
+
+    def __init__(self, datafolder, split='train'):
+        assert split in ['train', 'val', 'test'], "split not exist"
+        filepath = os.path.join(datafolder, split)
+        datalist = []
+        labelist = []
+        flist = getFiles_full(filepath, '.h5')
+        for fname in flist:
+            f = h5py.File(os.path.join(datafolder, fname.split('\n')[0]), 'r')
+            datalist.append(np.array(f['data']))
+            labelist.append(np.array(f['pid']))
+        self.data = np.concatenate(datalist,axis=0).transpose(0,2,1)
+        self.label = np.concatenate(labelist, axis=0)
+
+    def __getitem__(self, idx):
+        return Tensor(self.data[idx]), Tensor(convert_label(self.label[idx],num=20)), Tensor(self.label[idx])
 
     def __len__(self):
         return len(self.data)
@@ -79,7 +107,7 @@ class shapenet_spix(Dataset):
         if self.onehot:
             label = convert_label(label)
             spix = convert_label(spix)
-        return Tensor(self.data[idx]), Tensor(label), Tensor(spix), Tensor(self.spix[idx])
+        return Tensor(self.data[idx]), Tensor(label), Tensor(spix), Tensor(self.label[idx])
 
     def __len__(self):
         return len(self.data)

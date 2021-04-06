@@ -142,12 +142,12 @@ if __name__ == "__main__":
                         default="../shapenet_partseg_spix", help="/ path/to/shapenet")
     parser.add_argument("--out_dir", default="./log",
                         type=str, help="/path/to/output directory")
-    parser.add_argument("--batchsize", default=16, type=int)
+    parser.add_argument("--batchsize", default=20, type=int)
     parser.add_argument("--nworkers", default=8, type=int,
                         help="number of threads for CPU parallel")
     parser.add_argument("--lr", default=1e-6, type=float, help="learning rate")
     parser.add_argument("--train_epoch", default=30, type=int)
-    parser.add_argument("--fdim", default=16, type=int,
+    parser.add_argument("--fdim", default=20, type=int,
                         help="embedding dimension")
     parser.add_argument("--niter", default=10, type=int,
                         help="number of iterations for differentiable SLIC")

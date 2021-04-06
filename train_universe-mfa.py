@@ -1,4 +1,3 @@
-from models.mnfeam_ptnet import addscaler
 import os
 import time
 import torch
@@ -18,9 +17,7 @@ def train(cfg):
     else:
         device = "cpu"
 
-    model = MfaPtnetSsn(cfg.fdim,
-                        cfg.nspix,
-                        cfg.niter,
+    model = MfaPtnetSsn(cfg.fdim, cfg.nspix, cfg.niter,
                         backend=soft_slic_pknn).to(device)
 
     disc_loss = discriminative_loss(0.1, 0.5)
@@ -47,7 +44,7 @@ def train(cfg):
             batch_iterations += 1
             iterations += 1
             metric = update_param(data, model, optimizer, cfg.compactness,
-                                  cfg.pos_scale, device, disc_loss)
+                                  cfg.pos_scale, device)
             meter.add(metric)
             state = meter.state(
                 f"[{batch_iterations},{epoch_idx}/{cfg.train_epoch}]")
@@ -60,10 +57,8 @@ def train(cfg):
                     (asa, usa) = test_res
                     strs = "ep_{:}_batch_{:}_iter_{:}_asa_{:.3f}_ue_{:.3f}.pth".format(
                         epoch_idx, batch_iterations, iterations, asa, usa)
-                    torch.save(
-                        model.state_dict(),
-                        os.path.join(
-                            cfg.out_dir, strs))
+                    torch.save(model.state_dict(),
+                               os.path.join(cfg.out_dir, strs))
     unique_id = str(int(time.time()))
     torch.save(model.state_dict(),
                os.path.join(cfg.out_dir, "model" + unique_id + ".pth"))
@@ -75,10 +70,10 @@ if __name__ == "__main__":
 
     parser.add_argument("--root",
                         type=str,
-                        default='../shapenet_part_seg_hdf5_data',
+                        default='../shapenet_partseg_inst',
                         help="/ path/to/shapenet")
     parser.add_argument("--out_dir",
-                        default="./log_mfa",
+                        default="./log_mfa_inst",
                         type=str,
                         help="/path/to/output directory")
     parser.add_argument("--batchsize", default=8, type=int)

@@ -8,3 +8,5 @@ settings.json
 *.pcd
 *.zip
 *.pth
+log*/
+events*

@@ -62,7 +62,7 @@ def update_param(data, model, optimizer, compactness, pos_scale, device,
     disc = disc_loss(msf, labels_num)
     #uniform_compactness = uniform_compact_loss(Q,coords.reshape(*coords.shape[:2], -1), H,device=device)
 
-    loss = recons_loss + compactness * compact_loss+1e-3*disc
+    loss = recons_loss + compactness * compact_loss + 1e-3 * disc
 
     optimizer.zero_grad()  # clear previous grad
     loss.backward()  # cal the grad
@@ -88,17 +88,17 @@ def train(cfg):
                          backend=soft_slic_pknn).to(device)
 
     disc_loss = discriminative_loss(0.1, 0.5, 1e-4)
-
     optimizer = optim.Adam(model.parameters(), cfg.lr)
+    dacayer = optim.lr_scheduler.StepLR(optimizer, 2, 0.9)
+    train_dataset = shapenet.shapenet_inst(cfg.root)
 
-    train_dataset = shapenet.shapenet(cfg.root)
     train_loader = DataLoader(train_dataset,
                               cfg.batchsize,
                               shuffle=True,
                               drop_last=True,
                               num_workers=cfg.nworkers)
 
-    test_dataset = shapenet.shapenet(cfg.root, split="test")
+    test_dataset = shapenet.shapenet_inst(cfg.root, split="test")
     test_loader = DataLoader(test_dataset, 1, shuffle=False, drop_last=False)
 
     meter = Meter()
@@ -124,6 +124,11 @@ def train(cfg):
                               iterations)
             writer.add_scalar("loss/disc_loss", metric["disc_loss"],
                               iterations)
+            writer.add_scalar("lr",
+                              
+                              optimizer.state_dict()['param_groups'][0]['lr'],
+                              
+                              iterations)
             if (iterations % 200) == 0:
                 (asa, usa) = eval(model, test_loader, cfg.pos_scale, device)
                 writer.add_scalar("test/asa", asa, iterations)
@@ -131,18 +136,9 @@ def train(cfg):
                 if (iterations % 1000) == 0:
                     strs = "ep_{:}_batch_{:}_iter_{:}_asa_{:.3f}_ue_{:.3f}.pth".format(
                         epoch_idx, batch_iterations, iterations, asa, usa)
-                    torch.save(
-                        model.state_dict(),
-                        os.path.join(
-                            cfg.out_dir, strs))
-            # if (iterations % cfg.test_interval) == 0:
-            #     asa = eval(model, test_loader, cfg.pos_scale,  device)
-            #     print(f"validation asa {asa}")
-            #     writer.add_scalar("comprehensive/asa", asa, iterations)
-            #     if asa > max_val_asa:
-            #         max_val_asa = asa
-            #         torch.save(model.state_dict(), os.path.join(
-            #             cfg.out_dir, "bset_model_sp_loss.pth"))
+                    torch.save(model.state_dict(),
+                               os.path.join(cfg.out_dir, strs))
+        dacayer.step()
 
     unique_id = str(int(time.time()))
     torch.save(model.state_dict(),
@@ -155,10 +151,10 @@ if __name__ == "__main__":
 
     parser.add_argument("--root",
                         type=str,
-                        default='../shapenet_part_seg_hdf5_data',
+                        default='../shapenet_partseg_inst',
                         help="/ path/to/shapenet")
     parser.add_argument("--out_dir",
-                        default="./log_bistream_ndisc",
+                        default="./log_bistream_inst",
                         type=str,
                         help="/path/to/output directory")
     parser.add_argument("--batchsize", default=8, type=int)

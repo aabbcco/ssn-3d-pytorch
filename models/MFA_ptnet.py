@@ -4,11 +4,18 @@ from lib.ssn.ssn import soft_slic_pknn
 from lib.MEFEAM.MEFEAM import MultiScaleFeatureAggregation, mlp
 from lib.utils.pointcloud_io import CalAchievableSegAccSingle, CalUnderSegErrSingle
 from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse
-from ..lib.pointnet.pointnet import ptnet
+from lib.pointnet.pointnet import ptnet
 
 
+#same as mnfeam but have smaller mlps
 class MfaPtnetSsn(nn.Module):
-    def __init__(self, feature_dim, nspix, n_iter=10, RGB=False, normal=False, backend=soft_slic_pknn):
+    def __init__(self,
+                 feature_dim,
+                 nspix,
+                 n_iter=10,
+                 RGB=False,
+                 normal=False,
+                 backend=soft_slic_pknn):
         super().__init__()
         self.channel = 3
         if RGB:
@@ -19,17 +26,19 @@ class MfaPtnetSsn(nn.Module):
         self.backend = backend
         self.nspix = nspix
         self.n_iter = n_iter
-        self.mfa = MultiScaleFeatureAggregation(
-            [32, 64, 64], [128, 64, self.feature_dim], 32, self.channel, [0.2, 0.3, 0.4])
+        self.mfa = MultiScaleFeatureAggregation([32, 64, 64],
+                                                [128, 64, self.feature_dim],
+                                                32, self.channel,
+                                                [0.2, 0.3, 0.4])
         self.ptnet = ptnet(self.feature_dim)
-        self.fushion = mlp([2*feature_dim, feature_dim], feature_dim)
+        self.fushion = mlp([2 * feature_dim, feature_dim], 2 * feature_dim)
 
     def forward(self, x):
         mfa = self.mfa(x)
         ptnet = self.ptnet(x)
         net = torch.cat((ptnet, mfa), dim=1)
         net = self.fushion(net)
-        return soft_slic_pknn(net, net[:, :, :self.nspix]), net
+        return soft_slic_pknn(net, net[:, :, :self.nspix]), mfa
 
 
 @torch.no_grad()
@@ -63,7 +72,13 @@ def eval(model, loader, pos_scale, device):
     return asaa, usaa  # cal asa
 
 
-def update_param(data, model, optimizer, compactness, pos_scale, device):
+def update_param(data,
+                 model,
+                 optimizer,
+                 compactness,
+                 pos_scale,
+                 device,
+                 disc=None):
     inputs, labels, labels_num = data
 
     inputs = inputs.to(device)
@@ -71,33 +86,45 @@ def update_param(data, model, optimizer, compactness, pos_scale, device):
 
     inputs = pos_scale * inputs
 
-    (Q, H, _, _), _ = model(inputs)
+    (Q, H, _, _), mfa = model(inputs)
 
     recons_loss = reconstruct_loss_with_cross_etnropy(Q, labels)
     compact_loss = reconstruct_loss_with_mse(Q, inputs, H)
     #uniform_compactness = uniform_compact_loss(Q,coords.reshape(*coords.shape[:2], -1), H,device=device)
 
     loss = recons_loss + compactness * compact_loss
+    if disc is not None:
+        disc_loss = disc(mfa, labels_num)
+        loss = loss + 1e-3 * disc_loss
+    else:
+        disc_loss = 0
 
     optimizer.zero_grad()  # clear previous grad
     loss.backward()  # cal the grad
     optimizer.step()  # backprop
-
+    lr = optimizer.state_dict()['param_groups'][0]['lr']
     return {
         "loss": loss.item(),
         "reconstruction": recons_loss.item(),
         "compact": compact_loss.item(),
+        "disc": disc_loss,
+        "lr": lr
     }
 
 
-def addscaler(metric, scalarWriter, iterations, test=False):
+def addscaler(metric, scalarWriter, iterations, test=False, disc=False):
     if not test:
-        scalarWriter.add_scalar("comprehensive/loss",
-                                metric["loss"], iterations)
+        scalarWriter.add_scalar("comprehensive/loss", metric["loss"],
+                                iterations)
         scalarWriter.add_scalar("loss/reconstruction_loss",
                                 metric["reconstruction"], iterations)
         scalarWriter.add_scalar("loss/compact_loss", metric["compact"],
                                 iterations)
+        scalarWriter.add_scalar("lr", metric["lr"], iterations)
+        if disc:
+            scalarWriter.add_scalar("loss/disc_loss", metric["disc"],
+                                    iterations)
+
     else:
         (asa, usa) = metric
         scalarWriter.add_scalar("test/asa", asa, iterations)
