@@ -86,7 +86,7 @@ def train(cfg):
                          backend=soft_slic_pknn).to(device)
 
     optimizer = optim.Adam(model.parameters(), cfg.lr)
-    decayer = optim.lr_scheduler.StepLR(optimizer, 2, 0.94)
+    decayer = optim.lr_scheduler.StepLR(optimizer, 1, 0.95)
 
     train_dataset = shapenet.shapenet_inst(cfg.root)
     train_loader = DataLoader(train_dataset,
@@ -166,7 +166,7 @@ if __name__ == "__main__":
                         default=8,
                         type=int,
                         help="number of threads for CPU parallel")
-    parser.add_argument("--lr", default=1e-5, type=float, help="learning rate")
+    parser.add_argument("--lr", default=5e-5, type=float, help="learning rate")
     parser.add_argument("--train_epoch", default=100, type=int)
     parser.add_argument("--fdim",
                         default=20,

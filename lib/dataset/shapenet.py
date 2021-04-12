@@ -5,10 +5,9 @@ import h5py
 import numpy as np
 
 
-def convert_label(label,num=50):
+def convert_label(label, num=50):
 
-    onehot = np.zeros(
-        (num, label.shape[0])).astype(np.float32)
+    onehot = np.zeros((num, label.shape[0])).astype(np.float32)
 
     ct = 0
     for t in np.unique(label).tolist():
@@ -20,8 +19,12 @@ def convert_label(label,num=50):
 
     return onehot
 
+
 def getFiles_full(path, suffix):
-    return [os.path.join(root, file) for root, dirs, files in os.walk(path) for file in files if file.endswith(suffix)]
+    return [
+        os.path.join(root, file) for root, dirs, files in os.walk(path)
+        for file in files if file.endswith(suffix)
+    ]
 
 
 class shapenet(Dataset):
@@ -33,7 +36,6 @@ class shapenet(Dataset):
         datafolder (string): folder containing shapenet result
         split (str, optional): options in train,test and val. Defaults to 'train'.
 """
-
     def __init__(self, datafolder, split='train'):
         assert split in ['train', 'val', 'test'], "split not exist"
         filepath = os.path.join(datafolder, split)
@@ -44,14 +46,16 @@ class shapenet(Dataset):
             f = h5py.File(os.path.join(datafolder, fname.split('\n')[0]), 'r')
             datalist.append(np.array(f['data']))
             labelist.append(np.array(f['pid']))
-        self.data = np.concatenate(datalist,axis=0).transpose(0,2,1)
+        self.data = np.concatenate(datalist, axis=0).transpose(0, 2, 1)
         self.label = np.concatenate(labelist, axis=0)
 
     def __getitem__(self, idx):
-        return Tensor(self.data[idx]), Tensor(convert_label(self.label[idx])), Tensor(self.label[idx])
+        return Tensor(self.data[idx]), Tensor(convert_label(
+            self.label[idx])), Tensor(self.label[idx])
 
     def __len__(self):
         return len(self.data)
+
 
 class shapenet_inst(Dataset):
     """
@@ -62,7 +66,6 @@ class shapenet_inst(Dataset):
         datafolder (string): folder containing shapenet result
         split (str, optional): options in train,test and val. Defaults to 'train'.
 """
-
     def __init__(self, datafolder, split='train'):
         assert split in ['train', 'val', 'test'], "split not exist"
         filepath = os.path.join(datafolder, split)
@@ -73,11 +76,12 @@ class shapenet_inst(Dataset):
             f = h5py.File(os.path.join(datafolder, fname.split('\n')[0]), 'r')
             datalist.append(np.array(f['data']))
             labelist.append(np.array(f['pid']))
-        self.data = np.concatenate(datalist,axis=0).transpose(0,2,1)
+        self.data = np.concatenate(datalist, axis=0).transpose(0, 2, 1)
         self.label = np.concatenate(labelist, axis=0)
 
     def __getitem__(self, idx):
-        return Tensor(self.data[idx]), Tensor(convert_label(self.label[idx],num=20)), Tensor(self.label[idx])
+        return Tensor(self.data[idx]), Tensor(
+            convert_label(self.label[idx], num=20)), Tensor(self.label[idx])
 
     def __len__(self):
         return len(self.data)
@@ -96,7 +100,7 @@ class shapenet_spix(Dataset):
             datalist.append(np.array(f['data']))
             labelist.append(np.array(f['label']))
             spixlist.append(np.array(f['spix']))
-        self.data = np.concatenate(datalist,axis=0).transpose(0,2,1)
+        self.data = np.concatenate(datalist, axis=0).transpose(0, 2, 1)
         self.label = np.concatenate(labelist, axis=0)
         self.spix = np.concatenate(spixlist, axis=0)
         self.onehot = onehot
@@ -107,7 +111,21 @@ class shapenet_spix(Dataset):
         if self.onehot:
             label = convert_label(label)
             spix = convert_label(spix)
-        return Tensor(self.data[idx]), Tensor(label), Tensor(spix), Tensor(self.label[idx])
+        return Tensor(self.data[idx]), Tensor(label), Tensor(spix), Tensor(
+            self.label[idx])
 
     def __len__(self):
+        return len(self.data)
+
+
+class shapenet_cpt(Dataset):
+    def __init__(self, filepath) -> None:
+        super().__init__()
+        f = h5py.File(filepath)
+        self.data = np.array(f["data"]).transpose(0,2,1)
+
+    def __getitem__(self, idx: int):
+        return Tensor(self.data[idx]),Tensor(np.zeros([1])),Tensor(np.zeros([1]))
+
+    def __len__(self) -> int:
         return len(self.data)
