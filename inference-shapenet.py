@@ -5,7 +5,7 @@ import os
 from lib.dataset.shapenet import shapenet
 from lib.utils.pointcloud_io import write
 from torch.utils.data import DataLoader
-from model_ptnet import PointNet_SSN
+from models.model_ptnet import PointNet_SSN
 from lib.ssn.ssn import soft_slic_pknn
 
 

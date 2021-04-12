@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 
 from lib.utils.meter import Meter
-from model_ptnet import PointNet_SSN
+from models.model_ptnet import PointNet_SSN
 from lib.dataset.shapenet import shapenet_spix
 from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse, uniform_compact_loss
 from lib.ssn.ssn import soft_slic_pknn

@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 
 from lib.utils.meter import Meter
-from model_MNFEAM import MFEAM_SSN
+from models.model_MNFEAM import MFEAM_SSN
 from lib.dataset.shapenet import shapenet_spix
 from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse, uniform_compact_loss
 from lib.MEFEAM.MEFEAM import discriminative_loss
