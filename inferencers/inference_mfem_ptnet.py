@@ -1,15 +1,15 @@
 import math
 import numpy as np
 import torch
+import torch.nn as nn
 import os
 
 from skimage.color import rgb2lab
 from lib.dataset.shapenet import shapenet, shapenet_spix
 from lib.utils.pointcloud_io import write
 from torch.utils.data import DataLoader
-from lib.ssn.ssn import soft_slic_all
-from model_MNFEAM import MFEAM_SSN
-from lib.ssn.ssn import soft_slic_pknn
+from lib.ssn.ssn import soft_slic_all,soft_slic_pknn
+from ..models.mfem_ptnet import *
 
 
 @torch.no_grad()
@@ -46,14 +46,15 @@ if __name__ == "__main__":
     import argparse
     import matplotlib.pyplot as plt
     parser = argparse.ArgumentParser()
-    parser.add_argument("--weight",
-                        "-w",
-                        default='log/model-shapenet.pth',
-                        type=str,
-                        help="/path/to/pretrained_weight")
+    parser.add_argument(
+        "--weight",
+        "-w",
+        default="log_lmnfeam_pknn-spix/model_epoch_17_614_iter_13500.pth",
+        type=str,
+        help="/path/to/pretrained_weight")
     parser.add_argument("--fdim",
                         "-d",
-                        default=16,
+                        default=10,
                         type=int,
                         help="embedding dimension")
     parser.add_argument("--niter",
@@ -77,7 +78,7 @@ if __name__ == "__main__":
 
     data = shapenet("../shapenet_part_seg_hdf5_data", split='val')
     loader = DataLoader(data, batch_size=1, shuffle=False)
-    model = MFEAM_SSN(10, 50, backend=soft_slic_pknn).to("cuda")
+    model  = multi_ptnet_SSN(10, 50, backend=soft_slic_pknn).to("cuda")
     model.load_state_dict(torch.load(args.weight))
     model.eval()
     print(model)

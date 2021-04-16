@@ -7,10 +7,10 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 
-from lib.utils.meter import Meter
-from model import SSNModel
-from lib.dataset import NYUv2, augmentation
-from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse, uniform_compact_loss
+from ..lib.utils.meter import Meter
+from ..model import SSNModel
+from ..lib.dataset import NYUv2, augmentation
+from ..lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse, uniform_compact_loss
 
 
 @torch.no_grad()

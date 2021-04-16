@@ -4,12 +4,12 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
-from models.bistream import bistream_SSN
-from lib.utils.meter import Meter
-from lib.ssn.ssn import soft_slic_pknn
-from lib.dataset import shapenet
-from lib.MEFEAM.MEFEAM import discriminative_loss
-from models.mfem_ptnet import *
+from ..models.bistream import bistream_SSN
+from ..lib.utils.meter import Meter
+from ..lib.ssn.ssn import soft_slic_pknn
+from ..lib.dataset import shapenet
+from ..lib.MEFEAM.MEFEAM import discriminative_loss
+from ..models.mfem_ptnet import *
 
 
 def train(cfg):

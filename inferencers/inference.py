@@ -6,7 +6,7 @@ import os
 from skimage.color import rgb2lab
 from skimage.segmentation._slic import _enforce_label_connectivity_cython
 
-from lib.ssn.ssn import soft_slic_all
+from ..lib.ssn.ssn import soft_slic_all
 
 
 @torch.no_grad()

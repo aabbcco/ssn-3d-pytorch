@@ -4,11 +4,11 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
-from lib.utils.meter import Meter
-from lib.ssn.ssn import soft_slic_pknn
-from lib.dataset import shapenet
-from lib.MEFEAM.MEFEAM import discriminative_loss
-from models.MFA_ptnet import *
+from ..lib.utils.meter import Meter
+from ..lib.ssn.ssn import soft_slic_pknn
+from ..lib.dataset import shapenet
+from ..lib.MEFEAM.MEFEAM import discriminative_loss
+from ..models.MFA_ptnet_lined import *
 
 
 def train(cfg):
@@ -17,8 +17,10 @@ def train(cfg):
     else:
         device = "cpu"
 
-    model = MfaPtnetSsn(cfg.fdim, cfg.nspix, cfg.niter,
-                        backend=soft_slic_pknn).to(device)
+    model = MfaPtnetSsnLined(cfg.fdim,
+                             cfg.nspix,
+                             cfg.niter,
+                             backend=soft_slic_pknn).to(device)
 
     disc_loss = discriminative_loss(0.1, 0.5)
 
@@ -44,7 +46,7 @@ def train(cfg):
             batch_iterations += 1
             iterations += 1
             metric = update_param(data, model, optimizer, cfg.compactness,
-                                  cfg.pos_scale, device)
+                                  cfg.pos_scale, device, disc_loss)
             meter.add(metric)
             state = meter.state(
                 f"[{batch_iterations},{epoch_idx}/{cfg.train_epoch}]")
@@ -70,10 +72,10 @@ if __name__ == "__main__":
 
     parser.add_argument("--root",
                         type=str,
-                        default='../shapenet_partseg_inst',
+                        default='../shapenet_part_seg_hdf5_data',
                         help="/ path/to/shapenet")
     parser.add_argument("--out_dir",
-                        default="./log_mfa_inst",
+                        default="./log_mfa_lined_disc",
                         type=str,
                         help="/path/to/output directory")
     parser.add_argument("--batchsize", default=8, type=int)

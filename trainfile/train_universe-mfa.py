@@ -4,11 +4,11 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
-from lib.utils.meter import Meter
-from lib.ssn.ssn import soft_slic_pknn
-from lib.dataset import shapenet
-from lib.MEFEAM.MEFEAM import discriminative_loss
-from models.MFA_ptnet import *
+from ..lib.utils.meter import Meter
+from ..lib.ssn.ssn import soft_slic_pknn
+from ..lib.dataset import shapenet
+from ..lib.MEFEAM.MEFEAM import discriminative_loss
+from ..models.MFA_ptnet import *
 
 
 def train(cfg):
@@ -23,16 +23,15 @@ def train(cfg):
     disc_loss = discriminative_loss(0.1, 0.5)
 
     optimizer = optim.Adam(model.parameters(), cfg.lr)
-    dacayer = optim.lr_scheduler.StepLR(optimizer, 2, 0.9)
 
-    train_dataset = shapenet.shapenet_inst(cfg.root)
+    train_dataset = shapenet.shapenet(cfg.root)
     train_loader = DataLoader(train_dataset,
                               cfg.batchsize,
                               shuffle=True,
                               drop_last=True,
                               num_workers=cfg.nworkers)
-.
-    test_dataset = shapenet.shapenet_inst(cfg.root, split="test")
+
+    test_dataset = shapenet.shapenet(cfg.root, split="test")
     test_loader = DataLoader(test_dataset, 1, shuffle=False, drop_last=False)
 
     meter = Meter()
@@ -60,7 +59,6 @@ def train(cfg):
                         epoch_idx, batch_iterations, iterations, asa, usa)
                     torch.save(model.state_dict(),
                                os.path.join(cfg.out_dir, strs))
-        dacayer.step()
     unique_id = str(int(time.time()))
     torch.save(model.state_dict(),
                os.path.join(cfg.out_dir, "model" + unique_id + ".pth"))

@@ -3,6 +3,21 @@ from torch import Tensor
 import os
 import h5py
 import numpy as np
+from .pointcloud_io import read
+
+
+def getFiles_full(path, suffix):
+    return [
+        os.path.join(root, file) for root, dirs, files in os.walk(path)
+        for file in files if file.endswith(suffix)
+    ]
+
+
+def getFiles(path, suffix):
+    return [
+        file for root, dirs, files in os.walk(path) for file in files
+        if file.endswith(suffix)
+    ]
 
 
 def convert_label(label, num=50):
@@ -122,10 +137,26 @@ class shapenet_cpt(Dataset):
     def __init__(self, filepath) -> None:
         super().__init__()
         f = h5py.File(filepath)
-        self.data = np.array(f["data"]).transpose(0,2,1)
+        self.data = np.array(f["data"]).transpose(0, 2, 1)
 
     def __getitem__(self, idx: int):
-        return Tensor(self.data[idx]),Tensor(np.zeros([1])),Tensor(np.zeros([1]))
+        return Tensor(self.data[idx]), Tensor(self.data[idx]), Tensor(
+            self.data[idx])
 
     def __len__(self) -> int:
         return len(self.data)
+
+
+class shapenet_man(Dataset):
+    def __init__(self, filepath) -> None:
+        super().__init__()
+        self.filelist = getFiles_full(filepath, ".pcd")
+
+    def __getitem__(self, idx: int):
+        filename = self.filelist[idx]
+        data = read(filename)
+        Tdata = Tensor(data[:, :3].transpose())
+        return Tdata, Tdata, Tdata
+
+    def __len__(self) -> int:
+        return len(self.filelist)

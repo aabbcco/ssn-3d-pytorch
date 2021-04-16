@@ -7,12 +7,12 @@ from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 from datetime import datetime
 
-from lib.utils.meter import Meter
-from lib.ssn.ssn import soft_slic_pknn
+from ..lib.utils.meter import Meter
+from ..lib.ssn.ssn import soft_slic_pknn
 from models.model_ptnet import PointNet_SSN
-from lib.dataset import shapenet
-from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse
-from lib.utils.pointcloud_io import CalAchievableSegAccSingle, CalUnderSegErrSingle
+from ..lib.dataset import shapenet
+from ..lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse
+from ..lib.utils.pointcloud_io import CalAchievableSegAccSingle, CalUnderSegErrSingle
 
 
 @torch.no_grad()
@@ -23,7 +23,7 @@ def eval(model, loader, pos_scale, device):
     cnt = 0
     for data in loader:
         cnt += 1
-        inputs, _, labels_num = data  # b*c*npoint
+        inputs, _, _,labels_num = data  # b*c*npoint
 
         inputs = inputs.to(device)  # b*c*w*h
         # labels = labels.to(device)  # sematic_lable
@@ -47,10 +47,11 @@ def eval(model, loader, pos_scale, device):
 
 
 def update_param(data, model, optimizer, compactness, pos_scale, device):
-    inputs, labels, _ = data
+    inputs, labels, spix,_ = data
 
     inputs = inputs.to(device)
     labels = labels.to(device)
+    spix = spix.to(device)
 
     inputs = pos_scale * inputs
 
@@ -58,9 +59,10 @@ def update_param(data, model, optimizer, compactness, pos_scale, device):
 
     recons_loss = reconstruct_loss_with_cross_etnropy(Q, labels)
     compact_loss = reconstruct_loss_with_mse(Q, inputs, H)
+    spix_loss = reconstruct_loss_with_cross_etnropy(Q, spix)
     #uniform_compactness = uniform_compact_loss(Q,coords.reshape(*coords.shape[:2], -1), H,device=device)
 
-    loss = recons_loss + compactness * compact_loss
+    loss = recons_loss + compactness * compact_loss+0.3*spix_loss
 
     optimizer.zero_grad()  # clear previous grad
     loss.backward()  # cal the grad
@@ -70,6 +72,7 @@ def update_param(data, model, optimizer, compactness, pos_scale, device):
         "loss": loss.item(),
         "reconstruction": recons_loss.item(),
         "compact": compact_loss.item(),
+        "spix":spix_loss.item(),
         "lr": optimizer.state_dict()['param_groups'][0]['lr']
     }
 
@@ -86,16 +89,16 @@ def train(cfg):
                          backend=soft_slic_pknn).to(device)
 
     optimizer = optim.Adam(model.parameters(), cfg.lr)
-    decayer = optim.lr_scheduler.StepLR(optimizer, 2, 0.94)
+    decayer = optim.lr_scheduler.StepLR(optimizer, 2, 0.95)
 
-    train_dataset = shapenet.shapenet(cfg.root)
+    train_dataset = shapenet.shapenet_spix(cfg.root)
     train_loader = DataLoader(train_dataset,
                               cfg.batchsize,
                               shuffle=True,
                               drop_last=True,
                               num_workers=cfg.nworkers)
 
-    test_dataset = shapenet.shapenet(cfg.root, split="test")
+    test_dataset = shapenet.shapenet_spix(cfg.root, split="test")
     test_loader = DataLoader(test_dataset, 1, shuffle=False, drop_last=False)
 
     meter = Meter()
@@ -143,6 +146,7 @@ def addscaler(metric, scalarWriter, iterations, test=False):
         scalarWriter.add_scalar("loss/compact_loss", metric["compact"],
                                 iterations)
         scalarWriter.add_scalar("lr", metric["lr"], iterations)
+        scalarWriter.add_scalar("loss/spix", metric["spix"], iterations)
     else:
         (asa, usa) = metric
         scalarWriter.add_scalar("eval/asa", asa, iterations)
@@ -155,10 +159,10 @@ if __name__ == "__main__":
 
     parser.add_argument("--root",
                         type=str,
-                        default='../shapenet_part_seg_hdf5_data',
+                        default='../shapenet_partseg_spix',
                         help="/ path/to/shapenet")
     parser.add_argument("--out_dir",
-                        default="../ssn-logs/pointnet-pknn-",
+                        default="../ssn-logs/pointnetx-pknn-spix-",
                         type=str,
                         help="/path/to/output directory")
     parser.add_argument("--batchsize", default=20, type=int)
@@ -166,7 +170,7 @@ if __name__ == "__main__":
                         default=8,
                         type=int,
                         help="number of threads for CPU parallel")
-    parser.add_argument("--lr", default=1e-5, type=float, help="learning rate")
+    parser.add_argument("--lr", default=3e-5, type=float, help="learning rate")
     parser.add_argument("--train_epoch", default=100, type=int)
     parser.add_argument("--fdim",
                         default=20,

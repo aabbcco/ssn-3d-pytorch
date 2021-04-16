@@ -4,43 +4,11 @@ import torch
 import torch.nn as nn
 import os
 
-from skimage.color import rgb2lab
-from lib.dataset.shapenet import shapenet, shapenet_spix
-from lib.utils.pointcloud_io import write
+from ..lib.dataset.shapenet import shapenet, shapenet_spix
+from ..lib.utils.pointcloud_io import write
 from torch.utils.data import DataLoader
-from lib.ssn.ssn import soft_slic_all,soft_slic_pknn
-from lib.MEFEAM.MEFEAM import LMFEAM
-
-
-class LMFEAM_SSN(nn.Module):
-    def __init__(self,
-                 feature_dim,
-                 nspix,
-                 mfem_dim=6,
-                 n_iter=10,
-                 RGB=False,
-                 normal=False,
-                 backend=soft_slic_pknn):
-        super().__init__()
-        self.nspix = nspix
-        self.n_iter = n_iter
-        self.channel = 3
-        self.backend = backend
-        if RGB:
-            self.channel += 3
-        if normal:
-            self.channel += 3
-        #[32, 64], [128, 128], [64, mfem_dim], 32,3 , [0.2, 0.4, 0.6]
-        self.lmfeam = LMFEAM([32, 64], [128, 128], [64, mfem_dim],
-                             [128, 64, feature_dim],
-                             32,
-                             self.channel,
-                             point_scale=[0.2, 0.4, 0.6])
-
-    def forward(self, x):
-        feature, msf = self.lmfeam(x)
-        return self.backend(feature, feature[:, :, :self.nspix],
-                            self.n_iter), msf
+from ..lib.ssn.ssn import soft_slic_all,soft_slic_pknn
+from ..models.bistream import *
 
 
 @torch.no_grad()
@@ -90,7 +58,7 @@ if __name__ == "__main__":
                         help="embedding dimension")
     parser.add_argument("--niter",
                         "-n",
-                        default=5,
+                        default=10,
                         type=int,
                         help="number of iterations for differentiable SLIC")
     parser.add_argument("--nspix",
@@ -109,7 +77,7 @@ if __name__ == "__main__":
 
     data = shapenet("../shapenet_part_seg_hdf5_data", split='val')
     loader = DataLoader(data, batch_size=1, shuffle=False)
-    model = LMFEAM_SSN(10, 50, backend=soft_slic_pknn).to("cuda")
+    model  = bistream_SSN(10, 50, backend=soft_slic_pknn).to("cuda")
     model.load_state_dict(torch.load(args.weight))
     model.eval()
     print(model)
