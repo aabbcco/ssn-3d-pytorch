@@ -7,11 +7,14 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 
-from ..lib.utils.meter import Meter
-from ..lib.ssn.ssn import soft_slic_pknn
-from ..models.model_ptnet import PointNet_SSN
-from ..lib.dataset import shapenet, augmentation
-from ..lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse
+import sys
+sys.path.append(os.path.dirname("../"))
+
+from lib.utils.meter import Meter
+from lib.ssn.ssn import soft_slic_pknn
+from models.model_ptnet import PointNet_SSN
+from lib.dataset import shapenet, augmentation
+from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse
 
 
 @torch.no_grad()

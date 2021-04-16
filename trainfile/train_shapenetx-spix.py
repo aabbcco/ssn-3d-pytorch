@@ -7,12 +7,15 @@ from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 from datetime import datetime
 
-from ..lib.utils.meter import Meter
-from ..lib.ssn.ssn import soft_slic_pknn
-from models.model_ptnet import PointNet_SSN
-from ..lib.dataset import shapenet
-from ..lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse
-from ..lib.utils.pointcloud_io import CalAchievableSegAccSingle, CalUnderSegErrSingle
+import sys
+sys.path.append(os.path.dirname("../"))
+
+from lib.utils.meter import Meter
+from lib.ssn.ssn import soft_slic_pknn
+from models.model_ptnet import PointNet_SSNx
+from lib.dataset import shapenet
+from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse
+from lib.utils.pointcloud_io import CalAchievableSegAccSingle, CalUnderSegErrSingle
 
 
 @torch.no_grad()
@@ -83,7 +86,7 @@ def train(cfg):
     else:
         device = "cpu"
 
-    model = PointNet_SSN(cfg.fdim,
+    model = PointNet_SSNx(cfg.fdim,
                          cfg.nspix,
                          cfg.niter,
                          backend=soft_slic_pknn).to(device)
@@ -159,10 +162,10 @@ if __name__ == "__main__":
 
     parser.add_argument("--root",
                         type=str,
-                        default='../shapenet_partseg_spix',
+                        default='../../shapenet_partseg_spix',
                         help="/ path/to/shapenet")
     parser.add_argument("--out_dir",
-                        default="../ssn-logs/pointnetx-pknn-spix-",
+                        default="../../ssn-logs/pointnetx-pknn-spix-",
                         type=str,
                         help="/path/to/output directory")
     parser.add_argument("--batchsize", default=20, type=int)

@@ -7,12 +7,15 @@ from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 from datetime import datetime
 
-from ..lib.utils.meter import Meter
-from ..lib.ssn.ssn import soft_slic_pknn
-from ..models.model_ptnet import PointNet_SSN
-from ..lib.dataset import shapenet
-from ..lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse
-from ..lib.utils.pointcloud_io import CalAchievableSegAccSingle, CalUnderSegErrSingle
+import sys
+sys.path.append(os.path.dirname("../"))
+
+from lib.utils.meter import Meter
+from lib.ssn.ssn import soft_slic_pknn
+from models.model_ptnet import PointNet_SSN
+from lib.dataset import shapenet
+from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse
+from lib.utils.pointcloud_io import CalAchievableSegAccSingle, CalUnderSegErrSingle
 
 
 @torch.no_grad()

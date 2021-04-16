@@ -7,11 +7,14 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 
-from ..lib.utils.meter import Meter
-from ..models.model_ptnet import PointNet_SSN
-from ..lib.dataset.shapenet import shapenet_spix
-from ..lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse, uniform_compact_loss
-from ..lib.ssn.ssn import soft_slic_pknn
+import sys
+sys.path.append(os.path.dirname("../"))
+
+from lib.utils.meter import Meter
+from models.model_ptnet import PointNet_SSNx
+from lib.dataset.shapenet import shapenet_spix
+from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse, uniform_compact_loss
+from lib.ssn.ssn import soft_slic_pknn
 
 
 @torch.no_grad()
@@ -85,7 +88,7 @@ def train(cfg):
     else:
         device = "cpu"
 
-    model = PointNet_SSN(cfg.fdim, cfg.nspix, cfg.niter,backend=soft_slic_pknn).to(device)
+    model = PointNet_SSNx(cfg.fdim, cfg.nspix, cfg.niter,backend=soft_slic_pknn).to(device)
 
     optimizer = optim.Adam(model.parameters(), cfg.lr)
 

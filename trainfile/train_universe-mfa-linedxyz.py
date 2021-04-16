@@ -4,11 +4,15 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
-from ..lib.utils.meter import Meter
-from ..lib.ssn.ssn import soft_slic_pknn
-from ..lib.dataset import shapenet
-from ..lib.MEFEAM.MEFEAM import discriminative_loss
-from ..models.MFA_ptnet_lined import *
+
+import sys
+sys.path.append(os.path.dirname("../"))
+
+from lib.utils.meter import Meter
+from lib.ssn.ssn import soft_slic_pknn
+from lib.dataset import shapenet
+from lib.MEFEAM.MEFEAM import discriminative_loss
+from models.MFA_ptnet_lined import *
 
 
 def train(cfg):

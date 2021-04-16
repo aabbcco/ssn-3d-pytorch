@@ -8,12 +8,15 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 
-from ..lib.utils.meter import Meter
-from ..lib.dataset import shapenet, augmentation
-from ..lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse, uniform_compact_loss
-from ..lib.MEFEAM.MEFEAM import discriminative_loss, LMFEAM
+import sys
+sys.path.append(os.path.dirname("../"))
 
-from ..lib.ssn.ssn import soft_slic_pknn, soft_slic_all
+from lib.utils.meter import Meter
+from lib.dataset import shapenet, augmentation
+from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse, uniform_compact_loss
+from lib.MEFEAM.MEFEAM import discriminative_loss, LMFEAM
+
+from lib.ssn.ssn import soft_slic_pknn, soft_slic_all
 
 
 class LMFEAM_SSN(Module):

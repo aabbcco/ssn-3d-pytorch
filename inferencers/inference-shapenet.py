@@ -2,11 +2,14 @@ from torch.utils.data import DataLoader
 import numpy as np
 import torch
 import os
+import sys
 
-from ..lib.dataset.shapenet import shapenet
-from ..lib.utils.pointcloud_io import write
-from ..models.model_ptnet import PointNet_SSN
-from ..lib.ssn.ssn import soft_slic_pknn
+sys.path.append(os.path.dirname("../"))
+
+from lib.dataset.shapenet import shapenet
+from lib.utils.pointcloud_io import write
+from models.model_ptnet import PointNet_SSN
+from lib.ssn.ssn import soft_slic_pknn
 
 
 @torch.no_grad()
@@ -72,7 +75,7 @@ if __name__ == "__main__":
     if not os.path.exists(args.folder):
         os.mkdir(args.folder)
 
-    data = shapenet("../shapenet_part_seg_hdf5_data", split='val')
+    data = shapenet("../../shapenet_part_seg_hdf5_data", split='val')
     loader = DataLoader(data, batch_size=1, shuffle=False)
     model = PointNet_SSN(args.fdim,
                          args.nspix,

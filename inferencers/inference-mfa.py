@@ -4,11 +4,14 @@ import torch
 import torch.nn as nn
 import os
 
-from ..lib.dataset.shapenet import shapenet, shapenet_spix
-from ..lib.utils.pointcloud_io import write
+import sys
+sys.path.append(os.path.dirname("../"))
+
+from lib.dataset.shapenet import shapenet, shapenet_spix
+from lib.utils.pointcloud_io import write
 from torch.utils.data import DataLoader
-from ..lib.ssn.ssn import soft_slic_all, soft_slic_pknn
-from ..models.MFA_ptnet import *
+from lib.ssn.ssn import soft_slic_all, soft_slic_pknn
+from models.MFA_ptnet import *
 
 
 @torch.no_grad()

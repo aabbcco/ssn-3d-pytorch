@@ -1,3 +1,4 @@
+from torch.utils.data import DataLoader
 import numpy as np
 import torch
 import os
@@ -5,10 +6,9 @@ import os
 import sys
 sys.path.append(os.path.dirname("../"))
 
-from lib.dataset.shapenet import shapenet_man
+from lib.dataset.shapenet import shapenet
 from lib.utils.pointcloud_io import write
-from torch.utils.data import DataLoader
-from models.model_ptnet import PointNet_SSN
+from models.model_ptnet import PointNet_SSNx
 from lib.ssn.ssn import soft_slic_pknn
 
 
@@ -46,13 +46,11 @@ if __name__ == "__main__":
     import argparse
     import matplotlib.pyplot as plt
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--weight",
-        "-w",
-        default=
-        '../ssn-logs/pointnet-pknn-4-10/ep_99_batch_6_iter_60000_asa_0.885_ue_0.223.pth',
-        type=str,
-        help="/path/to/pretrained_weight")
+    parser.add_argument("--weight",
+                        "-w",
+                        default='log/model-shapenet.pth',
+                        type=str,
+                        help="/path/to/pretrained_weight")
     parser.add_argument("--fdim",
                         "-d",
                         default=20,
@@ -77,10 +75,9 @@ if __name__ == "__main__":
     if not os.path.exists(args.folder):
         os.mkdir(args.folder)
 
-    # data = shapenet_cpt("lib/shapenet_cpt_test0.h5")
-    data = shapenet_man("../data")
+    data = shapenet("../../shapenet_part_seg_hdf5_data", split='val')
     loader = DataLoader(data, batch_size=1, shuffle=False)
-    model = PointNet_SSN(args.fdim,
+    model = PointNet_SSNx(args.fdim,
                          args.nspix,
                          args.niter,
                          backend=soft_slic_pknn).to("cuda")
@@ -90,14 +87,14 @@ if __name__ == "__main__":
 
     s = time.time()
 
-    for i, (pointcloud, _, _) in enumerate(loader):
+    for i, (pointcloud, label, labell) in enumerate(loader):
         print(i)
-        pointcloud = pointcloud.to("cuda")
         _, labels, _, _ = inference(pointcloud, 10, model)
-        labels = labels.transpose(1, 0)
-        pointcloud = pointcloud.squeeze(0).detach().to("cpu").transpose(
-            1, 0).numpy()
+
+        pointcloud = pointcloud.squeeze(0).transpose(1, 0).numpy()
+        label = labell.transpose(1, 0).numpy()
         #spix = spix.squeeze(0).transpose(1,  0).numpy()
-        ptcloud = np.concatenate((pointcloud, labels, labels, labels), axis=-1)
+        ptcloud = np.concatenate(
+            (pointcloud, label, label, labels.transpose(1, 0)), axis=-1)
         write.tobcd(ptcloud, 'xyzrgb',
                     os.path.join(args.folder, '{}.pcd'.format(i)))

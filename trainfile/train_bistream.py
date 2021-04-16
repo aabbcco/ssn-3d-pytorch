@@ -6,6 +6,10 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
+
+import sys
+sys.path.append(os.path.dirname("../"))
+
 from ..models.bistream import bistream_SSN
 from ..lib.utils.meter import Meter
 from ..lib.ssn.ssn import soft_slic_pknn

@@ -4,12 +4,15 @@ import torch
 import torch.nn as nn
 import os
 
+import sys
+sys.path.append(os.path.dirname("../"))
+
 from skimage.color import rgb2lab
 from lib.dataset.shapenet import shapenet, shapenet_spix
 from lib.utils.pointcloud_io import write
 from torch.utils.data import DataLoader
 from lib.ssn.ssn import soft_slic_all,soft_slic_pknn
-from ..models.mfem_ptnet import *
+from models.mfem_ptnet import *
 
 
 @torch.no_grad()

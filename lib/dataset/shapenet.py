@@ -58,7 +58,7 @@ class shapenet(Dataset):
         labelist = []
         flist = getFiles_full(filepath, '.h5')
         for fname in flist:
-            f = h5py.File(os.path.join(datafolder, fname.split('\n')[0]), 'r')
+            f = h5py.File(fname, 'r')
             datalist.append(np.array(f['data']))
             labelist.append(np.array(f['pid']))
         self.data = np.concatenate(datalist, axis=0).transpose(0, 2, 1)
@@ -111,7 +111,7 @@ class shapenet_spix(Dataset):
         spixlist = []
         flist = getFiles_full(filepath, '.h5')
         for fname in flist:
-            f = h5py.File(os.path.join(datafolder, fname.split('\n')[0]), 'r')
+            f = h5py.File( fname, 'r')
             datalist.append(np.array(f['data']))
             labelist.append(np.array(f['label']))
             spixlist.append(np.array(f['spix']))
