@@ -20,7 +20,7 @@ def getFiles(path, suffix):
     ]
 
 
-def convert_label(label, num=50):
+def convert_label(label, num=20):
 
     onehot = np.zeros((num, label.shape[0])).astype(np.float32)
 

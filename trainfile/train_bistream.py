@@ -10,13 +10,13 @@ from tensorboardX import SummaryWriter
 import sys
 sys.path.append(os.path.dirname("../"))
 
-from ..models.bistream import bistream_SSN
-from ..lib.utils.meter import Meter
-from ..lib.ssn.ssn import soft_slic_pknn
-from ..lib.dataset import shapenet
-from ..lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse
-from ..lib.MEFEAM.MEFEAM import discriminative_loss
-from ..lib.utils.pointcloud_io import CalAchievableSegAccSingle, CalUnderSegErrSingle
+from models.bistream import bistream_SSN
+from lib.utils.meter import Meter
+from lib.ssn.ssn import soft_slic_pknn
+from lib.dataset import shapenet
+from lib.utils.loss import reconstruct_loss_with_cross_etnropy, reconstruct_loss_with_mse
+from lib.MEFEAM.MEFEAM import discriminative_loss
+from lib.utils.pointcloud_io import CalAchievableSegAccSingle, CalUnderSegErrSingle
 
 
 @torch.no_grad()
