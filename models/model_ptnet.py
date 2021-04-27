@@ -1,8 +1,12 @@
+import os
+import sys
+sys.path.append(os.path.dirname("../"))
 import torch
 import torch.nn as nn
+from torch.nn.modules import module
 
 from lib.pointnet.pointnet import STN3d, STNkd, feature_transform_reguliarzer
-from lib.ssn.ssn import soft_slic_all, soft_slic_knn
+from lib.ssn.ssn import soft_slic_all, soft_slic_knn,soft_slic_pknn
 import torch.nn.functional as F
 
 
@@ -77,7 +81,7 @@ class PointNet_SSN(nn.Module):
         out_max = out_max.view(-1, 2048)
 
         expand = out_max.view(-1, 2048, 1).repeat(1, 1, N)
-        concat = torch.cat([expand, out1, out2, out3, out4, out5], 1)
+        concat = torch.cat([expand, out1, out2, out3, out4], 1)
         net = F.relu(self.bns1(self.convs1(concat)))
         net = F.relu(self.bns2(self.convs2(net)))
         net = F.relu(self.bns3(self.convs3(net)))
@@ -121,7 +125,7 @@ class PointNet_SSNx(nn.Module):
         self.bn4 = nn.BatchNorm1d(512)
         self.bn5 = nn.BatchNorm1d(2048)
         self.fstn = STNkd(k=128)
-        self.convs1 = torch.nn.Conv1d(4928, 256, 1)
+        self.convs1 = torch.nn.Conv1d(2880, 256, 1)
         self.convs2 = torch.nn.Conv1d(256, 256, 1)
         self.convs3 = torch.nn.Conv1d(256, 128, 1)
         self.convs4 = torch.nn.Conv1d(128+self.channel, feature_dim, 1)
@@ -233,3 +237,7 @@ class PointNet_SSNx(nn.Module):
 #         #net = net.transpose(2, 1).contiguous()
 
 #         return soft_slic_knn(net, net[:, :, :self.nspix], self.n_iter)
+
+if __name__ == "__main__":
+    model = PointNet_SSNx(20,soft_slic_pknn)
+    print(model)
