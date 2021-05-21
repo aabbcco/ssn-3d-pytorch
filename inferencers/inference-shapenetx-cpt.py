@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname("../"))
 from lib.dataset.shapenet import shapenet_man
 from lib.utils.pointcloud_io import write
 from torch.utils.data import DataLoader
-from models.model_ptnet import PointNet_SSN
+from models.model_ptnet import PointNet_SSNx_old
 from lib.ssn.ssn import soft_slic_pknn
 
 
@@ -50,7 +50,7 @@ if __name__ == "__main__":
         "--weight",
         "-w",
         default=
-        '../ssn-logs/pointnet-pknn-4-10/ep_99_batch_6_iter_60000_asa_0.885_ue_0.223.pth',
+        '../../ssn-logs/pointnetx-inst-spix-4-22/ep_97_batch_218_iter_59000_asa_0.942_ue_0.115.pth',
         type=str,
         help="/path/to/pretrained_weight")
     parser.add_argument("--fdim",
@@ -80,7 +80,7 @@ if __name__ == "__main__":
     # data = shapenet_cpt("lib/shapenet_cpt_test0.h5")
     data = shapenet_man("../../data")
     loader = DataLoader(data, batch_size=1, shuffle=False)
-    model = PointNet_SSN(args.fdim,
+    model = PointNet_SSNx_old(args.fdim,
                          args.nspix,
                          args.niter,
                          backend=soft_slic_pknn).to("cuda")

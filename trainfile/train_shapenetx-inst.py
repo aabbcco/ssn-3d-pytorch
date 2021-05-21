@@ -158,7 +158,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--root",
                         type=str,
-                        default='../shapenet_partseg_inst',
+                        default='../../shapenet_partseg_inst',
                         help="/ path/to/shapenet")
     parser.add_argument("--out_dir",
                         default="../ssn-logs/pointnetx-pknn-inst-",
